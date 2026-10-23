@@ -886,3 +886,36 @@
 .config-row__new:hover {
   background: var(--accent-soft);
 }
+
+/* ---------- 回到最新 ---------- */
+
+.chat__composer {
+  position: relative;
+}
+
+.jump-btn {
+  position: absolute;
+  left: 50%;
+  top: -15px;
+  transform: translateX(-50%);
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: var(--shadow-md);
+  transition:
+    color 130ms ease,
+    border-color 130ms ease,
+    transform 130ms ease;
+}
+
+.jump-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateX(-50%) translateY(-1px);
+}

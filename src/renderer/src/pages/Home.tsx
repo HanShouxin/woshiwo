@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowUp, Square } from 'lucide-react'
+import { ArrowDown, ArrowUp, Square } from 'lucide-react'
 import { parseDraftBlocks } from '../ai/draft'
 import { ensureSampleSession } from '../ai/sampleSession'
 import { abortChat, startChat } from '../ai/client'
@@ -57,6 +57,10 @@ export default function Home(): React.JSX.Element {
   const [streamId, setStreamId] = useState<string | null>(null)
   const liveRef = useRef('')
   const streamRef = useRef<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  /** 用户是否停在底部：在底部时新消息自动跟随，往上翻时不打扰 */
+  const stickToBottom = useRef(true)
+  const [showJump, setShowJump] = useState(false)
 
   // 设置页保存配置后这里会自动更新（appSettings 变化会触发 live query）
   const config = useLiveQuery(
@@ -80,6 +84,33 @@ export default function Home(): React.JSX.Element {
   useEffect(() => {
     if (!activeId && sessions.length > 0) setActiveId(sessions[0].id)
   }, [sessions, activeId])
+
+  function scrollToBottom(smooth = true): void {
+    const element = scrollRef.current
+    if (!element) return
+    element.scrollTo({ top: element.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
+    stickToBottom.current = true
+    setShowJump(false)
+  }
+
+  function handleScroll(): void {
+    const element = scrollRef.current
+    if (!element) return
+    const distance = element.scrollHeight - element.scrollTop - element.clientHeight
+    stickToBottom.current = distance < 90
+    setShowJump(distance > 180)
+  }
+
+  // 换会话：直接落到最新
+  useEffect(() => {
+    stickToBottom.current = true
+    scrollToBottom(false)
+  }, [activeId])
+
+  // 新消息 / 流式输出：只有本来就停在底部时才跟随
+  useEffect(() => {
+    if (stickToBottom.current) scrollToBottom(false)
+  }, [messages.length, liveText])
 
   const activeSession = sessions.find((session) => session.id === activeId)
   const isSample = activeSession?.kind === 'sample'
@@ -185,7 +216,7 @@ export default function Home(): React.JSX.Element {
 
   return (
     <div className="chat">
-      <div className="chat__scroll">
+      <div className="chat__scroll" ref={scrollRef} onScroll={handleScroll}>
         <div className="chat__inner">
           {isEmpty ? (
             <div className="chat__welcome">
@@ -255,6 +286,16 @@ export default function Home(): React.JSX.Element {
       </div>
 
       <div className="chat__composer">
+        {showJump ? (
+          <button
+            type="button"
+            className="jump-btn"
+            title="回到最新"
+            onClick={() => scrollToBottom()}
+          >
+            <ArrowDown size={15} strokeWidth={2} />
+          </button>
+        ) : null}
         <div className="chat__composer-inner">
           <div className="composer__box">
             <textarea
