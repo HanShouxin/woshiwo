@@ -12,6 +12,7 @@ import Settings from './pages/Settings'
 import { applyTheme, onSystemThemeChange, readTheme } from './lib/theme'
 import type { ThemeMode } from './lib/theme'
 import { getSetting } from './db/repo'
+import { runStartupIntegration } from './ai/integrate'
 
 export default function App(): React.JSX.Element {
   useEffect(() => {
@@ -19,9 +20,19 @@ export default function App(): React.JSX.Element {
     applyTheme(readTheme())
     void getSetting<ThemeMode>('theme', readTheme()).then((mode) => applyTheme(mode))
 
-    return onSystemThemeChange(() => {
+    // 启动即消化：延迟几秒后台静默整合上次对话，不阻塞启动
+    const timer = setTimeout(() => {
+      void runStartupIntegration()
+    }, 3500)
+
+    const offTheme = onSystemThemeChange(() => {
       if (readTheme() === 'system') applyTheme('system')
     })
+
+    return () => {
+      clearTimeout(timer)
+      offTheme()
+    }
   }, [])
 
   return (

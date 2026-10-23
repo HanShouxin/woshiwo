@@ -103,3 +103,6 @@ export interface ChatTurn {
   role: 'system' | 'user' | 'assistant'
   content: string
 }
+
+/** 长期记忆类型 */
+export type MemoryType = 'fact' | 'preference' | 'decision' | 'other'

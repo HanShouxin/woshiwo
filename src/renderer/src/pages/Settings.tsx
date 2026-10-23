@@ -5,6 +5,17 @@ import Page from '../components/Page'
 import { applyTheme, readTheme, writeTheme } from '../lib/theme'
 import type { ThemeMode } from '../lib/theme'
 import { getOverview, getSetting, setSetting } from '../db/repo'
+import {
+  backupFileName,
+  buildBackup,
+  clearAllData,
+  exportReflectionsMarkdown,
+  exportViewpointsMarkdown,
+  reflectionsFileName,
+  restoreBackup,
+  serializeBackup,
+  viewpointsFileName
+} from '../db/backup'
 import { startChat } from '../ai/client'
 import { DEFAULT_OLLAMA_BASE, OPENAI_BASE_PLACEHOLDER } from '../../../shared/constants'
 import type { AIProvider, AIConfigEntry, AppInfo } from '../../../shared/constants'
@@ -59,6 +70,7 @@ export default function Settings(): React.JSX.Element {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
+  const [backupStatus, setBackupStatus] = useState('')
 
   useEffect(() => {
     if (stored) setTheme(stored)
@@ -290,6 +302,79 @@ export default function Settings(): React.JSX.Element {
     .filter((item) => item.provider === form.provider)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 
+  async function exportBackup(): Promise<void> {
+    const backup = await buildBackup()
+    const result = await window.woshiwo.file.saveText({
+      content: serializeBackup(backup),
+      defaultName: backupFileName(),
+      extension: 'json'
+    })
+    setBackupStatus(result.ok ? `已导出到 ${result.path}` : '已取消')
+  }
+
+  async function importBackup(): Promise<void> {
+    const confirmed = window.confirm(
+      '导入会覆盖当前全部数据，且无法撤销。\n建议先导出一份当前数据的备份。\n\n确定继续吗？'
+    )
+    if (!confirmed) return
+    const file = await window.woshiwo.file.openText()
+    if (!file.ok || !file.content) {
+      setBackupStatus('已取消')
+      return
+    }
+    try {
+      const counts = await restoreBackup(file.content)
+      setBackupStatus(
+        `已导入：现状 ${counts.profileCards ?? 0} · 目标 ${counts.goals ?? 0} · 矛盾 ${
+          counts.contradictions ?? 0
+        } · 行动 ${counts.actions ?? 0} · 感悟 ${counts.viewpoints ?? 0} · 复盘 ${
+          counts.reflections ?? 0
+        }`
+      )
+    } catch (error) {
+      setBackupStatus(`导入失败：${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+
+  async function exportViewpoints(): Promise<void> {
+    const content = await exportViewpointsMarkdown()
+    const result = await window.woshiwo.file.saveText({
+      content,
+      defaultName: viewpointsFileName(),
+      extension: 'md'
+    })
+    setBackupStatus(result.ok ? `已导出到 ${result.path}` : '已取消')
+  }
+
+  async function exportReflections(): Promise<void> {
+    const content = await exportReflectionsMarkdown()
+    const result = await window.woshiwo.file.saveText({
+      content,
+      defaultName: reflectionsFileName(),
+      extension: 'md'
+    })
+    setBackupStatus(result.ok ? `已导出到 ${result.path}` : '已取消')
+  }
+
+  async function clearEverything(): Promise<void> {
+    const confirmed = window.confirm(
+      '这会清空全部数据：对话、长期记忆、目标、矛盾、行动、感悟、现状档案、复盘笔记，以及 AI 连接配置与密钥。\n\n清空后无法恢复，除非你手里有备份文件。确定吗？'
+    )
+    if (!confirmed) return
+
+    const list = await getSetting<AIConfigEntry[]>('aiConfigs', [])
+    for (const item of list) {
+      await window.woshiwo.ai.deleteKey(item.id)
+    }
+    await clearAllData()
+    setConfigs([])
+    setActiveId('')
+    setForm(EMPTY_FORM)
+    setApiKey('')
+    setKeySaved(false)
+    setBackupStatus('已清空全部数据')
+  }
+
   const rows: ReadonlyArray<{ label: string; value: number | undefined }> = [    { label: '现状档案', value: overview?.profileCards },
     { label: '目标', value: overview?.goals },
     { label: '矛盾', value: overview?.contradictions },
@@ -495,8 +580,10 @@ export default function Settings(): React.JSX.Element {
       </section>
 
       <section className="section">
-        <h2 className="section__title">数据</h2>
-        <p className="section__desc">所有数据保存在本机，这是你目前拥有的全部记录。</p>
+        <h2 className="section__title">数据与备份</h2>
+        <p className="section__desc">
+          所有数据保存在本机。换电脑或重装前，记得先导出一份备份——导入会覆盖现有数据。
+        </p>
         {rows.map((row) => (
           <div className="field-row" key={row.label}>
             <span className="field-row__label">{row.label}</span>
@@ -507,6 +594,31 @@ export default function Settings(): React.JSX.Element {
           <span className="field-row__label">数据目录</span>
           <span className="field-row__value muted">{info?.dataDir ?? '读取中…'}</span>
         </div>
+
+        <div className="add-row" style={{ flexWrap: 'wrap' }}>
+          <button type="button" className="btn" onClick={() => void exportBackup()}>
+            导出备份
+          </button>
+          <button type="button" className="btn" onClick={() => void importBackup()}>
+            导入备份
+          </button>
+          <button type="button" className="btn" onClick={() => void exportViewpoints()}>
+            导出感悟 .md
+          </button>
+          <button type="button" className="btn" onClick={() => void exportReflections()}>
+            导出复盘 .md
+          </button>
+          <button
+            type="button"
+            className="btn btn--ghost"
+            style={{ color: 'var(--text-2)' }}
+            onClick={() => void clearEverything()}
+          >
+            清空全部数据
+          </button>
+        </div>
+
+        {backupStatus ? <p className="muted" style={{ marginTop: 10 }}>{backupStatus}</p> : null}
       </section>
 
       <section className="section">

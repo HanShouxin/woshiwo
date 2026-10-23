@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { ArrowDown, ArrowUp, Square } from 'lucide-react'
@@ -6,6 +6,7 @@ import { parseDraftBlocks } from '../ai/draft'
 import { ensureSampleSession } from '../ai/sampleSession'
 import { abortChat, startChat } from '../ai/client'
 import { buildContext } from '../ai/context'
+import { getIntegrationStatus, subscribeIntegration } from '../ai/integrate'
 import DraftCard from '../components/DraftCard'
 import {
   appendMessage,
@@ -116,6 +117,8 @@ export default function Home(): React.JSX.Element {
   const isSample = activeSession?.kind === 'sample'
   const isEmpty = messages.length === 0 && !liveText
   const modelReady = Boolean(config?.model && config?.baseUrl)
+  const integrating =
+    useSyncExternalStore(subscribeIntegration, getIntegrationStatus) === 'running'
 
   async function newChat(): Promise<void> {
     const id = await createSession()
@@ -347,6 +350,12 @@ export default function Home(): React.JSX.Element {
               ) : null}
 
               <div className="composer__bar-right">
+                {integrating ? (
+                  <span className="model-status" title="正在把上次对话整理成长期记忆">
+                    <span className="typing-dot" />
+                    整理上次对话
+                  </span>
+                ) : null}
                 <Link to={SETTINGS_PATH} className="model-status">
                   <span
                     className="model-status__dot"

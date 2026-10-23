@@ -32,6 +32,21 @@ const api = {
   /** 标题栏跟随主题 */
   setTitleBarTheme: (theme: 'light' | 'dark') =>
     ipcRenderer.invoke('window:titlebar', theme) as Promise<boolean>,
+  file: {
+    saveText: (payload: { content: string; defaultName: string; extension: 'json' | 'md' }) =>
+      ipcRenderer.invoke('file:saveText', payload) as Promise<{
+        ok: boolean
+        path?: string
+        error?: string
+      }>,
+    openText: () =>
+      ipcRenderer.invoke('file:openText') as Promise<{
+        ok: boolean
+        content?: string
+        path?: string
+        error?: string
+      }>
+  },
   ai: {
     setKey: (configId: string, key: string) =>
       ipcRenderer.invoke('key:set', configId, key) as Promise<boolean>,

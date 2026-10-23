@@ -1,5 +1,5 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
-import { mkdirSync } from 'node:fs'
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { registerAiIpc } from './ai'
 
@@ -103,6 +103,48 @@ if (!gotLock) {
         height: 36
       })
       return true
+    })
+
+    // 导出：主进程弹系统保存框并写文件（大文件不经过渲染层内存）
+    ipcMain.handle(
+      'file:saveText',
+      async (
+        event,
+        payload: { content: string; defaultName: string; extension: 'json' | 'md' }
+      ) => {
+        const win = BrowserWindow.fromWebContents(event.sender) ?? undefined
+        const filter =
+          payload.extension === 'md'
+            ? { name: 'Markdown', extensions: ['md'] }
+            : { name: '备份文件', extensions: ['json'] }
+        const result = await dialog.showSaveDialog(win!, {
+          defaultPath: payload.defaultName,
+          filters: [filter]
+        })
+        if (result.canceled || !result.filePath) return { ok: false }
+        try {
+          writeFileSync(result.filePath, payload.content, 'utf8')
+          return { ok: true, path: result.filePath }
+        } catch (error) {
+          return { ok: false, error: String(error) }
+        }
+      }
+    )
+
+    // 导入：选文件并读回内容
+    ipcMain.handle('file:openText', async (event) => {
+      const win = BrowserWindow.fromWebContents(event.sender) ?? undefined
+      const result = await dialog.showOpenDialog(win!, {
+        properties: ['openFile'],
+        filters: [{ name: '备份文件', extensions: ['json'] }]
+      })
+      if (result.canceled || result.filePaths.length === 0) return { ok: false }
+      try {
+        const content = readFileSync(result.filePaths[0], 'utf8')
+        return { ok: true, content, path: result.filePaths[0] }
+      } catch (error) {
+        return { ok: false, error: String(error) }
+      }
     })
 
     createWindow()
