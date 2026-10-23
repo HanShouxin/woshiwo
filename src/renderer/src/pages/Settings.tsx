@@ -21,6 +21,21 @@ const PROVIDERS: ReadonlyArray<{ value: AIProvider; label: string }> = [
 
 const EMPTY_CONFIG: AIConfig = { provider: 'openai', baseUrl: '', model: '' }
 
+/** 把服务商返回的原始报错翻译成一句人话 */
+function friendlyError(error?: string): string {
+  if (!error) return '未知错误'
+  if (error.includes('401') || /api[- ]?key/i.test(error)) {
+    return '密钥无效或未被接受（401）。检查 Key 是否完整、是否属于这个平台'
+  }
+  if (error.includes('403')) return '密钥没有访问该模型的权限（403）'
+  if (error.includes('404')) return '接口地址或模型名不对（404）。地址通常以 /v1 结尾'
+  if (error.includes('429')) return '请求太频繁或额度不足（429）'
+  if (error.includes('ECONNREFUSED') || error.includes('fetch failed')) {
+    return '连不上这个地址。本地 Ollama 请确认服务已启动'
+  }
+  return error
+}
+
 export default function Settings(): React.JSX.Element {
   const stored = useLiveQuery(() => getSetting<ThemeMode>('theme', 'system'), [], 'system')
   const overview = useLiveQuery(getOverview, [], undefined)
@@ -97,7 +112,11 @@ export default function Settings(): React.JSX.Element {
     setConfig(next)
 
     if (keyChanged) {
-      await window.woshiwo.ai.setKey(keyInput.trim())
+      const saved = await window.woshiwo.ai.setKey(keyInput.trim())
+      if (!saved) {
+        setStatus('密钥保存失败，请重试')
+        return
+      }
       setHasKey(true)
       setKeyInput('')
       setStatus('密钥已更新，请重新选择模型名')
@@ -123,15 +142,41 @@ export default function Settings(): React.JSX.Element {
   }
 
   async function testConnection(): Promise<void> {
+    const baseUrl = config.baseUrl.trim()
     const model = config.model.trim()
+    if (!baseUrl) {
+      setStatus('先填接口地址')
+      return
+    }
     if (!model) {
       setStatus('先填模型名，再测试')
       return
     }
+    if (config.provider === 'openai' && !keyInput.trim() && !hasKey) {
+      setStatus('先填密钥，再测试')
+      return
+    }
+
     setBusy(true)
     setStatus('正在连接…')
+
+    // 测试前先把当前配置和密钥落到主进程 —— 它手里有 Key，请求才会带上 Authorization
+    const next: AIConfig = { provider: config.provider, baseUrl, model }
+    await setSetting('aiConfig', next)
+    setConfig(next)
+    if (keyInput.trim()) {
+      const saved = await window.woshiwo.ai.setKey(keyInput.trim())
+      if (!saved) {
+        setBusy(false)
+        setStatus('密钥保存失败，请重试')
+        return
+      }
+      setHasKey(true)
+      setKeyInput('')
+    }
+
     const handle = startChat({
-      config: { ...config, baseUrl: config.baseUrl.trim(), model },
+      config: next,
       messages: [
         { role: 'system', content: '你是一个连接测试助手，回答保持在一句话以内。' },
         { role: 'user', content: '请用一句话说明你已经就位。' }
@@ -140,9 +185,10 @@ export default function Settings(): React.JSX.Element {
     const result = await handle.done
     setBusy(false)
     if (result.ok) {
-      setStatus(`连接成功 · ${result.text.slice(0, 50)}`)
+      const reply = result.text.trim()
+      setStatus(reply ? `连接成功 · ${reply.slice(0, 60)}` : '连接成功，但模型没有返回内容（检查模型名是否为对话模型）')
     } else {
-      setStatus(`连接失败：${result.error ?? '未知错误'}`)
+      setStatus(`连接失败：${friendlyError(result.error)}`)
     }
   }
 

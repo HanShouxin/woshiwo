@@ -17,17 +17,23 @@ function keyFile(): string {
   return join(app.getPath('userData'), 'ai-key.bin')
 }
 
-function saveKey(key: string): void {
+function saveKey(key: string): boolean {
   const path = keyFile()
-  if (!key) {
-    writeFileSync(path, Buffer.alloc(0))
-    return
-  }
-  if (safeStorage.isEncryptionAvailable()) {
-    writeFileSync(path, safeStorage.encryptString(key))
-  } else {
-    // 系统不支持加密时退回本地明文文件（仅本机，不进数据库与备份）
-    writeFileSync(path, Buffer.from(key, 'utf8'))
+  try {
+    if (!key) {
+      writeFileSync(path, Buffer.alloc(0))
+      return true
+    }
+    if (safeStorage.isEncryptionAvailable()) {
+      writeFileSync(path, safeStorage.encryptString(key))
+    } else {
+      // 系统不支持加密时退回本地明文文件（仅本机，不进数据库与备份）
+      writeFileSync(path, Buffer.from(key, 'utf8'))
+    }
+    return true
+  } catch (error) {
+    console.error('[ai] 保存密钥失败', error)
+    return false
   }
 }
 
@@ -151,10 +157,7 @@ async function streamCompletion(
 }
 
 export function registerAiIpc(): void {
-  ipcMain.handle('key:set', (_event, key: string) => {
-    saveKey(key)
-    return true
-  })
+  ipcMain.handle('key:set', (_event, key: string) => saveKey(key))
 
   ipcMain.handle('key:has', () => loadKey().length > 0)
 

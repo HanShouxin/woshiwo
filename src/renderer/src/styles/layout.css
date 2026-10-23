@@ -710,3 +710,14 @@
     transform: scale(1);
   }
 }
+
+/* 按钮不换行、不被输入框挤压 */
+.btn,
+.segmented__item {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.form-inline .btn {
+  height: 34px;
+}
