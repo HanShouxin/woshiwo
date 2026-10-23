@@ -33,6 +33,7 @@ const api = {
     setKey: (configId: string, key: string) =>
       ipcRenderer.invoke('key:set', configId, key) as Promise<boolean>,
     hasKey: (configId: string) => ipcRenderer.invoke('key:has', configId) as Promise<boolean>,
+    getKey: (configId: string) => ipcRenderer.invoke('key:get', configId) as Promise<string>,
     deleteKey: (configId: string) => ipcRenderer.invoke('key:delete', configId) as Promise<boolean>,
     chat: (payload: ChatPayload) =>
       ipcRenderer.invoke('ai:chat', payload) as Promise<{

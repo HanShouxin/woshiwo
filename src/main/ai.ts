@@ -178,6 +178,10 @@ export function registerAiIpc(): void {
 
   ipcMain.handle('key:has', (_event, configId: string) => loadKey(configId).length > 0)
 
+  // 回读已保存的 Key：供设置页回填输入框，点眼睛可查看 / 复制。
+  // 只进渲染进程内存，绝不进数据库与备份。
+  ipcMain.handle('key:get', (_event, configId: string) => loadKey(configId))
+
   ipcMain.handle('key:delete', (_event, configId: string) => deleteKey(configId))
 
   ipcMain.handle(

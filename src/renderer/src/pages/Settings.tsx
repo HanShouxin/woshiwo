@@ -88,8 +88,12 @@ export default function Settings(): React.JSX.Element {
         baseUrl: active.baseUrl,
         model: active.model
       })
-      const has = await window.woshiwo.ai.hasKey(active.id)
-      if (alive) setKeySaved(has)
+      // 回读已保存的 Key 填进输入框：点眼睛就能看、能复制
+      const key = await window.woshiwo.ai.getKey(active.id)
+      if (alive) {
+        setApiKey(key)
+        setKeySaved(key.length > 0)
+      }
     })()
 
     return () => {
@@ -123,11 +127,12 @@ export default function Settings(): React.JSX.Element {
       baseUrl: entry.baseUrl,
       model: entry.model
     })
-    setApiKey('')
     setShowKey(false)
     setPickerOpen(false)
     setStatus('')
-    setKeySaved(await window.woshiwo.ai.hasKey(entry.id))
+    const key = await window.woshiwo.ai.getKey(entry.id)
+    setApiKey(key)
+    setKeySaved(key.length > 0)
     await setSetting('activeConfigId', entry.id)
   }
 
@@ -229,8 +234,6 @@ export default function Settings(): React.JSX.Element {
         return
       }
       setKeySaved(true)
-      setApiKey('')
-      setShowKey(false)
     }
 
     setStatus('已保存，之后会自动使用这个配置')
@@ -387,7 +390,7 @@ export default function Settings(): React.JSX.Element {
             <label className="form-field">
               <span className="form-field__label">
                 API-KEY
-                {keySaved ? ' · 已保存' : form.provider === 'ollama' ? ' · 可选' : ''}
+                {keySaved ? ' · 已保存（点眼睛查看）' : form.provider === 'ollama' ? ' · 可选' : ''}
               </span>
               <div className="pwd-wrap">
                 <input
@@ -395,7 +398,7 @@ export default function Settings(): React.JSX.Element {
                   type={showKey ? 'text' : 'password'}
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder={keySaved ? '已保存，如需更换请输入新的' : 'sk-…'}
+                  placeholder="sk-…"
                   value={apiKey}
                   onChange={(event) => setApiKey(event.target.value)}
                 />
