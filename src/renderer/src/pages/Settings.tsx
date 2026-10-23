@@ -107,16 +107,52 @@ export default function Settings(): React.JSX.Element {
     void setSetting('theme', next)
   }
 
-  /** 切换服务商只改 provider：已填的内容一律保留，不丢数据 */
-  function changeProvider(provider: AIProvider): void {
-    setForm((prev) => ({
-      ...prev,
-      provider,
-      baseUrl:
-        prev.baseUrl ||
-        (provider === 'ollama' ? DEFAULT_OLLAMA_BASE : '')
-    }))
+  /**
+   * 切换服务商 = 切换到另一套配置路径：
+   * 优先载入该服务商最近一次保存的配置；没保存过就给默认值 + 提示。
+   * （两边的配置互不覆盖）
+   */
+  async function changeProvider(provider: AIProvider): Promise<void> {
+    if (provider === form.provider) return
+
     setStatus('')
+    setShowKey(false)
+
+    const latest = configs
+      .filter((item) => item.provider === provider)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0]
+
+    if (latest) {
+      setActiveId(latest.id)
+      setForm({
+        name: latest.name,
+        provider,
+        baseUrl: latest.baseUrl,
+        model: latest.model
+      })
+      const key = await window.woshiwo.ai.getKey(latest.id)
+      setApiKey(key)
+      setKeySaved(key.length > 0)
+      await setSetting('activeConfigId', latest.id)
+      setStatus(`已载入「${latest.name}」`)
+      return
+    }
+
+    setActiveId('')
+    setApiKey('')
+    setKeySaved(false)
+    setForm({
+      name: '',
+      provider,
+      baseUrl: provider === 'ollama' ? DEFAULT_OLLAMA_BASE : '',
+      model: ''
+    })
+    await setSetting('activeConfigId', '')
+    setStatus(
+      provider === 'ollama'
+        ? '还没有保存过 Ollama 配置，填好后先测试再保存'
+        : '还没有保存过 OpenAI 兼容配置，填好后先测试再保存'
+    )
   }
 
   async function selectConfig(entry: AIConfigEntry): Promise<void> {
@@ -249,8 +285,12 @@ export default function Settings(): React.JSX.Element {
     }
   }
 
-  const rows: ReadonlyArray<{ label: string; value: number | undefined }> = [
-    { label: '现状档案', value: overview?.profileCards },
+  // 「已保存配置」只列当前服务商下的，两套配置路径互不干扰
+  const scopedConfigs = configs
+    .filter((item) => item.provider === form.provider)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+
+  const rows: ReadonlyArray<{ label: string; value: number | undefined }> = [    { label: '现状档案', value: overview?.profileCards },
     { label: '目标', value: overview?.goals },
     { label: '矛盾', value: overview?.contradictions },
     { label: '行动', value: overview?.actions },
@@ -298,7 +338,7 @@ export default function Settings(): React.JSX.Element {
                   className={`segmented__item${
                     form.provider === item.value ? ' segmented__item--active' : ''
                   }`}
-                  onClick={() => changeProvider(item.value)}
+                  onClick={() => void changeProvider(item.value)}
                 >
                   {item.label}
                 </button>
@@ -312,15 +352,17 @@ export default function Settings(): React.JSX.Element {
                 onClick={() => setPickerOpen((value) => !value)}
               >
                 <List size={13} strokeWidth={2} />
-                已保存配置{configs.length > 0 ? ` (${configs.length})` : ''}
+                已保存配置{scopedConfigs.length > 0 ? ` (${scopedConfigs.length})` : ''}
               </button>
 
               {pickerOpen ? (
                 <div className="config-pop">
-                  {configs.length === 0 ? (
-                    <p className="config-pop__empty">还没有保存过配置</p>
+                  {scopedConfigs.length === 0 ? (
+                    <p className="config-pop__empty">
+                      这个服务商下还没有配置，填好后保存一条
+                    </p>
                   ) : (
-                    configs.map((entry) => (
+                    scopedConfigs.map((entry) => (
                       <div key={entry.id} className="config-row">
                         <button
                           type="button"
