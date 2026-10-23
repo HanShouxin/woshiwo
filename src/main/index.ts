@@ -2,6 +2,12 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
+// 文本类桌面工具不需要 GPU 合成：省电，并避免驱动/远程桌面/受限环境下的 GPU 进程崩溃。
+app.commandLine.appendSwitch('disable-gpu')
+app.commandLine.appendSwitch('disable-gpu-compositing')
+app.commandLine.appendSwitch('disable-gpu-sandbox')
+app.disableHardwareAcceleration()
+
 /**
  * 数据目录（便携优先）—— 评审 #10 定案。
  * 便携版的语义是"拷贝文件夹即带走数据"，所以打包后数据落在程序目录/data，
