@@ -1,0 +1,622 @@
+/* 布局扩展：两栏、卡片网格、标签、发送按钮。
+   在 app.css 之后加载，以覆盖同名规则。 */
+
+.page--wide {
+  max-width: 980px;
+}
+
+/* ---------- 发送按钮 ---------- */
+
+.send-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--text-3);
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.send-btn--ready {
+  background: var(--accent);
+  color: #fff;
+}
+
+.send-btn--ready:hover {
+  background: var(--accent-hover);
+}
+
+.send-btn:disabled {
+  cursor: default;
+}
+
+/* ---------- 分栏 ---------- */
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 28px;
+  align-items: start;
+}
+
+.split--equal {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.split__main,
+.split__side {
+  min-width: 0;
+}
+
+.split__section {
+  margin-top: 26px;
+}
+
+@media (max-width: 1080px) {
+  .split,
+  .split--equal {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+}
+
+/* ---------- 面板 ---------- */
+
+.panel {
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel--side {
+  position: sticky;
+  top: 24px;
+}
+
+.panel__head {
+  margin-bottom: 10px;
+}
+
+.panel__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.panel__count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel__hint {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.panel__empty {
+  margin: 14px 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+/* ---------- 现状卡片网格 ---------- */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.info-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 124px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  text-align: left;
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.info-card:hover {
+  border-color: var(--border-strong);
+}
+
+.info-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.info-card__category {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.info-card__delete {
+  opacity: 0;
+  margin-top: 0;
+  width: 22px;
+  height: 22px;
+}
+
+.info-card:hover .info-card__delete {
+  opacity: 1;
+}
+
+.info-card__body {
+  flex: 1;
+  margin-top: 8px;
+}
+
+.info-card__body .editable {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.info-card--add {
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-style: dashed;
+  box-shadow: none;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+.info-card--add:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* ---------- 分类标签 ---------- */
+
+.compose-panel {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.category-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.chip {
+  height: 26px;
+  padding: 0 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 12px;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.chip--active {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+}
+
+.chip--ghost {
+  border-style: dashed;
+  color: var(--text-3);
+}
+
+/* ---------- 我是我：来源 ---------- */
+
+.core-thought__source {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+  text-align: right;
+}
+
+.add-block {
+  margin-top: 4px;
+}
+
+.link-btn {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.link-btn:hover {
+  color: var(--accent);
+}
+
+.source-field {
+  margin-top: 8px;
+  height: 30px;
+  font-size: 12px;
+}
+
+.viewpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.viewpoint {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.viewpoint .editable {
+  font-size: 14px;
+}
+
+.viewpoint__source {
+  margin-top: 2px;
+  padding: 2px 7px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.viewpoint__source:hover {
+  color: var(--text-2);
+}
+
+/* ---------- 长期习惯标签 ---------- */
+
+.habit-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.habit-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 6px 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+
+.habit-chip__input {
+  width: auto;
+  min-width: 56px;
+  max-width: 180px;
+  padding: 1px 2px;
+  font-size: 12px;
+}
+
+.habit-chip__input:hover {
+  border-color: transparent;
+}
+
+.habit-chip__input:focus {
+  background: var(--surface);
+}
+
+.habit-chip__remove {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  color: var(--text-3);
+}
+
+.habit-chip__remove:hover {
+  background: rgba(215, 0, 21, 0.1);
+  color: #d70015;
+}
+
+/* ---------- 聊天 ---------- */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat__scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.chat__inner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 34px 40px 8px;
+}
+
+.chat__welcome {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 56vh;
+}
+
+.chat__notice {
+  margin: 8px 0 20px;
+  padding: 11px 14px;
+  border-radius: var(--radius);
+  background: var(--bg-subtle);
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.chat__composer {
+  padding: 8px 40px 22px;
+}
+
+.chat__composer-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.msg {
+  margin-bottom: 22px;
+}
+
+.msg--user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.msg__bubble {
+  max-width: 78%;
+  padding: 10px 14px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--bg-subtle);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.msg__body {
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.msg__p {
+  margin: 0 0 9px;
+}
+
+.msg__p:last-child {
+  margin-bottom: 0;
+}
+
+.msg__source {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ---------- 历史对话 ---------- */
+
+.composer__bar {
+  position: relative;
+}
+
+.history-pop {
+  position: absolute;
+  bottom: 42px;
+  left: 0;
+  z-index: 20;
+  width: 268px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.history-pop__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 13px;
+  text-align: left;
+}
+
+.history-pop__item:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+.history-pop__item--active {
+  color: var(--accent);
+}
+
+.history-pop__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-pop__kind {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* ---------- 草案卡片 ---------- */
+
+.draft-card {
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.draft-card--readonly {
+  border-left-color: var(--text-3);
+}
+
+.draft-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.draft-card__label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.draft-card--readonly .draft-card__label {
+  color: var(--text-3);
+}
+
+.draft-card__goal {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.draft-card__field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.draft-card__field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.draft-card__textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  outline: none;
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.draft-card__textarea:focus {
+  border-color: var(--accent);
+}
+
+.draft-card__action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.draft-card__type {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-2);
+  font-size: 10px;
+}
+
+.draft-card__input {
+  flex: 1;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  outline: none;
+}
+
+.draft-card__input:hover {
+  border-color: var(--border);
+}
+
+.draft-card__input:focus {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.draft-card__remove {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--text-3);
+}
+
+.draft-card__remove:hover {
+  background: rgba(215, 0, 21, 0.1);
+  color: #d70015;
+}
+
+.draft-card__why {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.draft-card__hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.draft-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}

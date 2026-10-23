@@ -123,8 +123,9 @@ export async function setCurrentContradiction(input: {
   text: string
   goalId?: string
   goalTitleSnapshot?: string
-}): Promise<{ replaced: number }> {
+}): Promise<{ replaced: number; id: string }> {
   let replaced = 0
+  const id = newId()
   await db.transaction('rw', db.contradictions, db.actions, async () => {
     const existing = await db.contradictions.where('status').equals('current').toArray()
     for (const old of existing) {
@@ -140,7 +141,7 @@ export async function setCurrentContradiction(input: {
       }
     }
     await db.contradictions.add({
-      id: newId(),
+      id,
       text: input.text,
       status: 'current',
       goalId: input.goalId,
@@ -148,7 +149,7 @@ export async function setCurrentContradiction(input: {
       proposedAt: now()
     })
   })
-  return { replaced }
+  return { replaced, id }
 }
 
 export async function updateContradiction(
