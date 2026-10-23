@@ -620,3 +620,93 @@
   gap: 8px;
   margin-top: 12px;
 }
+
+/* ---------- 步骤序号 ---------- */
+
+.step-index {
+  flex: 0 0 auto;
+  width: 50px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 草案序号与移动 ---------- */
+
+.draft-card__index {
+  flex: 0 0 auto;
+  width: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-card__move {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  color: var(--text-3);
+}
+
+.draft-card__move:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+/* ---------- 设置表单 ---------- */
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.form-field {
+  display: block;
+}
+
+.form-field__label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.form-field .add-input {
+  width: 100%;
+}
+
+.form-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.form-inline .add-input {
+  flex: 1;
+}
+
+/* ---------- 思考中 ---------- */
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: typing-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes typing-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

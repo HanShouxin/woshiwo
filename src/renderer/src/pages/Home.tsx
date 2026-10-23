@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowUp } from 'lucide-react'
+import { ArrowUp, Square } from 'lucide-react'
 import { parseDraftBlocks } from '../ai/draft'
 import { ensureSampleSession } from '../ai/sampleSession'
+import { abortChat, startChat } from '../ai/client'
+import { buildContext } from '../ai/context'
 import DraftCard from '../components/DraftCard'
 import {
   appendMessage,
@@ -12,9 +14,9 @@ import {
   listSessions,
   updateMessage
 } from '../db/chatRepo'
-import { addAction, setCurrentContradiction } from '../db/repo'
+import { addAction, getSetting, setCurrentContradiction } from '../db/repo'
 import { SETTINGS_PATH } from '../../../shared/constants'
-import type { DraftPayload } from '../../../shared/constants'
+import type { AIConfig, DraftPayload } from '../../../shared/constants'
 
 const PROMPTS = [
   '最近有点迷茫，不知道应该先做什么。',
@@ -22,9 +24,6 @@ const PROMPTS = [
   '我想回顾之前的计划，看看接下来该做什么。'
 ] as const
 
-const NO_MODEL_NOTICE = '这句话已经记下了。还没有接入 AI 模型——去设置里配置一个，我们就能接着往下分析。'
-
-/** 把 **粗体** 和换行渲染成可读段落 */
 function renderText(text: string): React.JSX.Element[] {
   return text
     .split('\n')
@@ -50,12 +49,23 @@ export default function Home(): React.JSX.Element {
     [activeId],
     []
   )
+
   const [input, setInput] = useState('')
   const [notice, setNotice] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [config, setConfig] = useState<AIConfig | null>(null)
+  const [liveText, setLiveText] = useState('')
+  const [streamId, setStreamId] = useState<string | null>(null)
+  const liveRef = useRef('')
+  const streamRef = useRef<string | null>(null)
 
   useEffect(() => {
     void ensureSampleSession()
+    void getSetting<AIConfig | null>('aiConfig', null).then(setConfig)
+    return () => {
+      // 离开页面时停掉未完成的请求，避免后台空转
+      if (streamRef.current) abortChat(streamRef.current)
+    }
   }, [])
 
   useEffect(() => {
@@ -64,7 +74,8 @@ export default function Home(): React.JSX.Element {
 
   const activeSession = sessions.find((session) => session.id === activeId)
   const isSample = activeSession?.kind === 'sample'
-  const isEmpty = messages.length === 0
+  const isEmpty = messages.length === 0 && !liveText
+  const modelReady = Boolean(config?.model && config?.baseUrl)
 
   async function newChat(): Promise<void> {
     const id = await createSession()
@@ -76,18 +87,79 @@ export default function Home(): React.JSX.Element {
 
   async function send(): Promise<void> {
     const text = input.trim()
-    if (!text) return
+    if (!text || streamId) return
 
     let sessionId = activeId
-    // 示例会话不写入用户内容：从示例直接进入自己的对话
+    // 示例会话不写用户内容：从这里直接进入自己的对话
     if (!sessionId || isSample) {
       sessionId = await createSession(text.slice(0, 16))
       setActiveId(sessionId)
     }
 
+    const history = messages.map((message) => ({
+      role: message.role,
+      content: message.content
+    }))
+
     await appendMessage({ sessionId, role: 'user', content: text })
     setInput('')
-    setNotice(NO_MODEL_NOTICE)
+    setNotice('')
+
+    if (!config || !modelReady) {
+      setNotice('这句话已经记下了。还没有接入 AI 模型——去设置里配置一个，我们就能接着往下分析。')
+      return
+    }
+
+    const turns = await buildContext({
+      history: [...history, { role: 'user', content: text }]
+    })
+
+    liveRef.current = ''
+    setLiveText('')
+    const handle = startChat({
+      config,
+      messages: turns,
+      onDelta: (chunk) => {
+        liveRef.current += chunk
+        setLiveText(liveRef.current)
+      }
+    })
+    setStreamId(handle.requestId)
+    streamRef.current = handle.requestId
+
+    const result = await handle.done
+    setStreamId(null)
+    streamRef.current = null
+    const partial = liveRef.current
+    setLiveText('')
+    liveRef.current = ''
+
+    if (result.ok) {
+      await appendMessage({ sessionId, role: 'assistant', content: result.text })
+    } else if (result.aborted) {
+      if (partial.trim()) {
+        await appendMessage({
+          sessionId,
+          role: 'assistant',
+          content: `${partial}\n\n（已停止生成）`,
+          status: 'interrupted'
+        })
+      }
+    } else {
+      setNotice(`请求失败：${result.error ?? '未知错误'}`)
+      if (partial.trim()) {
+        await appendMessage({
+          sessionId,
+          role: 'assistant',
+          content: partial,
+          status: 'interrupted'
+        })
+      }
+    }
+  }
+
+  function stop(): void {
+    if (streamId) abortChat(streamId)
   }
 
   async function applyDraft(payload: DraftPayload, messageId: string): Promise<void> {
@@ -136,7 +208,9 @@ export default function Home(): React.JSX.Element {
                     <div className="msg__bubble">{message.content}</div>
                   ) : (
                     <>
-                      {parsed.text ? <div className="msg__body">{renderText(parsed.text)}</div> : null}
+                      {parsed.text ? (
+                        <div className="msg__body">{renderText(parsed.text)}</div>
+                      ) : null}
                       {parsed.drafts.map((draft, index) => (
                         <DraftCard
                           key={index}
@@ -152,6 +226,19 @@ export default function Home(): React.JSX.Element {
               )
             })
           )}
+
+          {liveText ? (
+            <div className="msg msg--assistant">
+              <div className="msg__body">{renderText(liveText)}</div>
+            </div>
+          ) : null}
+
+          {streamId ? (
+            <p className="msg__source" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="typing-dot" />
+              正在思考…
+            </p>
+          ) : null}
 
           {notice ? <p className="chat__notice">{notice}</p> : null}
         </div>
@@ -210,18 +297,29 @@ export default function Home(): React.JSX.Element {
 
               <div className="composer__bar-right">
                 <Link to={SETTINGS_PATH} className="model-status">
-                  <span className="model-status__dot" />
-                  未配置 AI · 去设置
+                  <span
+                    className="model-status__dot"
+                    style={modelReady ? { background: 'var(--accent)' } : undefined}
+                  />
+                  {modelReady
+                    ? `${config?.provider === 'ollama' ? 'Ollama' : 'OpenAI 兼容'} · ${config?.model}`
+                    : '未配置 AI · 去设置'}
                 </Link>
-                <button
-                  type="button"
-                  className={`send-btn${input.trim() ? ' send-btn--ready' : ''}`}
-                  title="发送（Enter）"
-                  disabled={!input.trim()}
-                  onClick={() => void send()}
-                >
-                  <ArrowUp size={16} strokeWidth={2.5} />
-                </button>
+                {streamId ? (
+                  <button type="button" className="send-btn send-btn--ready" title="停止" onClick={stop}>
+                    <Square size={12} strokeWidth={2.5} fill="currentColor" />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`send-btn${input.trim() ? ' send-btn--ready' : ''}`}
+                    title="发送（Enter）"
+                    disabled={!input.trim()}
+                    onClick={() => void send()}
+                  >
+                    <ArrowUp size={16} strokeWidth={2.5} />
+                  </button>
+                )}
               </div>
             </div>
           </div>

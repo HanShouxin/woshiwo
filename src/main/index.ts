@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { registerAiIpc } from './ai'
 
 // 文本类桌面工具不需要 GPU 合成：省电，并避免驱动/远程桌面/受限环境下的 GPU 进程崩溃。
 app.commandLine.appendSwitch('disable-gpu')
@@ -82,6 +83,8 @@ if (!gotLock) {
       dataDir,
       isPackaged: app.isPackaged
     }))
+
+    registerAiIpc()
 
     createWindow()
 

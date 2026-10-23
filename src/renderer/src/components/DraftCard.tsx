@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, X } from 'lucide-react'
 import type { DraftPayload } from '../../../shared/constants'
 
 interface DraftCardProps {
@@ -12,6 +12,7 @@ interface DraftCardProps {
 /**
  * 草案确认卡片（定稿 §5 的灵魂交互）：
  * 矛盾与行动都可以在这里改，改完点「确认写入」才落库；绝不静默写入。
+ * 行动按「紧急 → 不紧急」排列，用户可上下调整。
  */
 export default function DraftCard({
   draft,
@@ -30,6 +31,16 @@ export default function DraftCard({
 
   function removeAction(index: number): void {
     setActions((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function moveAction(index: number, direction: -1 | 1): void {
+    setActions((prev) => {
+      const target = index + direction
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
   }
 
   function addAction(): void {
@@ -70,9 +81,10 @@ export default function DraftCard({
       </label>
 
       <div className="draft-card__field">
-        <span className="draft-card__field-label">行动</span>
+        <span className="draft-card__field-label">行动（按紧急程度排列）</span>
         {actions.map((action, index) => (
           <div className="draft-card__action" key={index}>
+            <span className="draft-card__index">{index + 1}</span>
             <span className="draft-card__type">{action.type === 'step' ? '步骤' : '习惯'}</span>
             <input
               className="draft-card__input"
@@ -82,14 +94,32 @@ export default function DraftCard({
               onChange={(event) => updateAction(index, event.target.value)}
             />
             {readOnly ? null : (
-              <button
-                type="button"
-                className="draft-card__remove"
-                title="移除"
-                onClick={() => removeAction(index)}
-              >
-                <X size={12} strokeWidth={2.5} />
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="draft-card__move"
+                  title="更紧急（上移）"
+                  onClick={() => moveAction(index, -1)}
+                >
+                  <ArrowUp size={11} strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  className="draft-card__move"
+                  title="不那么紧急（下移）"
+                  onClick={() => moveAction(index, 1)}
+                >
+                  <ArrowDown size={11} strokeWidth={2.5} />
+                </button>
+                <button
+                  type="button"
+                  className="draft-card__remove"
+                  title="移除"
+                  onClick={() => removeAction(index)}
+                >
+                  <X size={12} strokeWidth={2.5} />
+                </button>
+              </>
             )}
           </div>
         ))}
@@ -111,19 +141,11 @@ export default function DraftCard({
           <button type="button" className="btn btn--primary" onClick={confirm}>
             确认写入
           </button>
-          <button
-            type="button"
-            className="btn btn--ghost"
-            onClick={() => setDone(true)}
-          >
+          <button type="button" className="btn btn--ghost" onClick={() => setDone(true)}>
             先不采纳
           </button>
         </div>
       )}
     </section>
   )
-}
-
-export function DraftAddIcon(): React.JSX.Element {
-  return <Plus size={12} strokeWidth={2.5} />
 }

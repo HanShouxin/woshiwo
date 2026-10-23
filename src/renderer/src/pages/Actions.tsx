@@ -211,8 +211,9 @@ export default function Actions(): React.JSX.Element {
                   当前步骤
                   <span className="group__count">{steps.length}</span>
                 </h2>
-                {steps.map((step) => (
+                {steps.map((step, index) => (
                   <div className="row" key={step.id}>
+                    <span className="step-index">步骤 {index + 1}</span>
                     <button
                       type="button"
                       className={`check${step.status === 'done' ? ' check--done' : ''}`}

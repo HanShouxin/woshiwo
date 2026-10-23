@@ -70,3 +70,24 @@ export interface AppInfo {
   dataDir: string
   isPackaged: boolean
 }
+
+/* ---------------- AI 连接 ---------------- */
+
+export type AIProvider = 'openai' | 'ollama'
+
+/** 单配置：一个 Key / 一个地址 / 一个模型（不含 Key 明文，Key 只在主进程） */
+export interface AIConfig {
+  provider: AIProvider
+  baseUrl: string
+  model: string
+}
+
+export const DEFAULT_OLLAMA_BASE = 'http://localhost:11434/v1'
+
+/** 当前会话送进模型的最近消息条数 */
+export const MAX_CONTEXT_MESSAGES = 20
+
+export interface ChatTurn {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
