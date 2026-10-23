@@ -29,6 +29,9 @@ const api = {
       isPackaged: boolean
     }>,
   platform: process.platform,
+  /** 标题栏跟随主题 */
+  setTitleBarTheme: (theme: 'light' | 'dark') =>
+    ipcRenderer.invoke('window:titlebar', theme) as Promise<boolean>,
   ai: {
     setKey: (configId: string, key: string) =>
       ipcRenderer.invoke('key:set', configId, key) as Promise<boolean>,

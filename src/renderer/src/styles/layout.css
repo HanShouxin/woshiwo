@@ -966,3 +966,21 @@
 .status-text--ok {
   color: var(--success);
 }
+
+/* ---------- 自绘标题栏 ---------- */
+
+.app {
+  padding-top: 36px;
+}
+
+.titlebar-drag {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 36px;
+  z-index: 60;
+  -webkit-app-region: drag;
+}
+
+.sidebar {
+  padding-top: 8px;
+}

@@ -41,6 +41,13 @@ if (!gotLock) {
       show: false,
       backgroundColor: '#FBFAF8',
       autoHideMenuBar: true,
+      // 标题栏与页面同色：隐藏系统标题栏底，保留原生窗口按钮（overlay）
+      titleBarStyle: 'hidden',
+      titleBarOverlay: {
+        color: '#fbfaf8',
+        symbolColor: '#1d1d1f',
+        height: 36
+      },
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         sandbox: true,
@@ -85,6 +92,18 @@ if (!gotLock) {
     }))
 
     registerAiIpc()
+
+    // 主题切换时同步标题栏颜色，避免深色页面配浅色标题栏
+    ipcMain.handle('window:titlebar', (event, theme: 'light' | 'dark') => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return false
+      win.setTitleBarOverlay({
+        color: theme === 'dark' ? '#161618' : '#fbfaf8',
+        symbolColor: theme === 'dark' ? '#f5f5f7' : '#1d1d1f',
+        height: 36
+      })
+      return true
+    })
 
     createWindow()
 

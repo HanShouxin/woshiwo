@@ -14,6 +14,8 @@ export function readTheme(): ThemeMode {
 export function applyTheme(mode: ThemeMode): void {
   const dark = mode === 'dark' || (mode === 'system' && systemPrefersDark())
   document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+  // 窗口标题栏（最小化/最大化/关闭那一行）跟页面同色
+  window.woshiwo?.setTitleBarTheme(dark ? 'dark' : 'light')
 }
 
 export function writeTheme(mode: ThemeMode): void {

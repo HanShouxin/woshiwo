@@ -23,24 +23,29 @@ const ICONS: Record<string, LucideIcon> = {
 }
 
 /**
- * 品牌印记：一笔未合拢的圆 + 中心一点。
- * 圆是自性，点是「我」；缺口留白，取「今日方知」的那个瞬间。
+ * 品牌印记：一点在上，两道潮纹在下。
+ * 「钱塘江上潮信来」—— 潮是外部的势，点是潮里的自己；
+ * 只有潮来时，人才照见「我是我」。
  */
 function BrandMark(): React.JSX.Element {
   return (
-    <svg viewBox="0 0 28 28" width="25" height="25" aria-hidden="true">
-      <circle
-        cx="14"
-        cy="14"
-        r="10.4"
+    <svg viewBox="0 0 28 28" width="26" height="26" aria-hidden="true">
+      <circle cx="14" cy="7.6" r="2.5" fill="currentColor" />
+      <path
+        d="M4 16.4 q 3 -3.4 6 0 t 6 0 t 6 0"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.3"
+        strokeWidth="1.5"
         strokeLinecap="round"
-        strokeDasharray="55 10"
-        transform="rotate(-38 14 14)"
       />
-      <circle cx="14" cy="14" r="2.9" fill="currentColor" />
+      <path
+        d="M7 21.6 q 2.4 -2.6 4.8 0 t 4.8 0 t 4.4 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        opacity="0.42"
+      />
     </svg>
   )
 }
