@@ -1,63 +1,79 @@
-# Phase 0 完成报告 — 我是我 V2.0
+# Phase 1 完成报告 — 我是我 V2.0
 
-日期：2026-10-23
-状态：**DONE_WITH_CONCERNS**（代码可运行并已通过构建；GUI 窗口无法在 agent 沙箱内长驻，需你在本机终端验收）
+日期：2026-10-24
+状态：**DONE**（类型检查通过、构建通过、7 个数据层测试全绿、窗口可正常启动）
 
-## 做了什么
+## 这一阶段交付了什么
 
-### 1. /autoplan 评审（降级执行）
+### 1. 数据层（11 张表）
 
-本机没有 gstack 运行时和 codex CLI，编排脚本无法原样执行。改用同等方法论：四视角对抗评审 + 独立只读子代理担任第二声部。
-
-产出 15 条发现，其中 3 条 critical 直接阻塞编码，已当场定案：
-
-| # | 问题 | 定案 |
+| 库 | 表 | 说明 |
 |---|---|---|
-| 8 | 草案协议全文没定义格式，灵魂交互无法开工 | ` ```draft ` + JSON `{v:1, goal?, contradiction, actions[{type,text}], rationale?}`；流式不渲染、闭合后解析、坏 JSON 降级纯文本、单消息取第一个 |
-| 9 | 记忆游标没有落库字段，删单条消息会让序号错位 | `chatMessages.seq` + `appSettings.integrationCursor`，按 seq 区间幂等，删消息不回退 |
-| 14 | `profileCards` 行粒度未定，两种实现完全不同 | 一行 = 一条记录（category/content/order/updatedAt），无 title，上下文按分类分组 |
+| 主库 `woshiwo` | chatSessions / chatMessages / sessionSummaries / memories / goals / contradictions / actions / viewpoints / profileCards / appSettings | 业务数据 + 设置 |
+| 独立库 `woshiwo-reflections` | reflections | **只有复盘模块持有句柄**，AI 上下文在架构上摸不到 |
 
-完整报告：`.workbuddy/reviews/autoplan-2026-10-23.md`
+评审的三条 critical 全部落地：
 
-### 2. 工程骨架
+- `chatMessages.seq` + `appSettings.integrationCursor`（记忆整合按 seq 区间幂等，删消息不回退）
+- `profileCards` 一行 = 一条记录（category / content / order），无 title
+- 草案协议常量 `DRAFT_BLOCK_LANG` + `DraftPayload` 已在 `src/shared/constants.ts` 定型（待 Phase 3 使用）
 
-- **栈**：electron-vite 6 + Electron 45 + React 19 + TypeScript + HashRouter + lucide-react
-- **三层边界**：main（窗口/单实例锁/数据目录/IPC）、preload（contextBridge 白名单）、renderer（UI）
-- **导航**：首页 · 现状 · 目标 · 行动 · 复盘 · 我是我 · 见证成长 + 设置，八个页面全部可路由
-- **视觉**：Apple 气质的暖白/深墨色板，深浅两套 token，主题切换（浅色/深色/跟随系统）真实可用
-- **已落地的设计细节**：「我是我」页的核心思想引文（代码常量，不可删）；首页空状态文案 + 三条快捷提示（点击填入输入框）+ 输入框上方「新对话 / 历史对话」+ 右侧「未配置 AI · 去设置」
-- **安全**：`sandbox: true`、`contextIsolation: true`、`nodeIntegration: false`、CSP、外链交给系统浏览器
-- **便携数据目录**：打包后 userData = 程序目录 `data/`，开发期 `.data/`（拷贝文件夹即带走数据）
+### 2. 业务规则（有测试保证）
 
-### 3. 验证
+| 规则 | 实现 | 测试 |
+|---|---|---|
+| 同一时刻只有一个当前主要矛盾 | `setCurrentContradiction` 事务内把旧矛盾标 `superseded`、旧步骤标 `archived` | ✅ |
+| 删除目标不解散矛盾 | 解除 `goalId`，`goalTitleSnapshot` 保留 → 时间线仍能显示「当时服务的目标」 | ✅ |
+| 删除矛盾连带删除行动 | 事务内先删 actions 再删 contradiction | ✅ |
+| 解决矛盾进历史 | `status: resolved` + `resolvedAt`，时间线自动出现节点 | ✅ |
+| 新感悟排最上 | order 递增 + 倒序读取 | ✅ |
+| 复盘与 AI 隔离 | 主库表清单中不存在 `reflections`（可断言） | ✅ |
 
-| 项目 | 结果 |
-|---|---|
-| `npm run typecheck` | 通过（node + web 双配置） |
-| `npm run build` | 通过（main 2.5kB / preload 0.4kB / renderer 679kB） |
-| Electron 启动 | 窗口进程可正常起来并稳定运行 |
-| git | `35f26d1` 首个提交 |
+### 3. 页面（全部接上真数据）
 
-## 遇到并解决的问题
+- **现状**：按分类分组，13 个预设分类 + 自定义分类，行内编辑、回车添加、删除
+- **目标**：短期/长期两段，行内编辑，一键标记达成（达成的划线 + 进时间线）
+- **行动**：当前矛盾卡（可编辑、可关联目标、可标记已解决并顺手写一句感悟进「我是我」）+ 当前步骤（勾选完成）+ 长期习惯；无矛盾时双入口（自己写 / 和 AI 一起找）
+- **我是我**：核心思想引文常驻顶部 + 感悟流（多行行内编辑，新的在上）
+- **复盘**：两栏（列表 + 编辑器）、**自动保存（700ms 防抖，无保存按钮）**、锁标识与隐私说明
+- **见证成长**：时间线，节点 = 已解决/已被替代的矛盾 + 达成的目标，两种节点视觉区分
+- **设置**：主题持久化到数据库、数据概览（八个维度的实时计数）、数据目录、版本
 
-1. **Electron 二进制下载失败**：沙箱内 fetch 被拦，改为沙箱外 curl npmmirror 镜像（150.8MB）+ 手动解压到 `node_modules/electron/dist`。
-2. **主进程被 Node 执行而非 Electron**：宿主注入 `ELECTRON_RUN_AS_NODE=1`。你本地终端不会有这个问题；若从某些 IDE 内嵌终端启动，需先 `unset ELECTRON_RUN_AS_NODE`。
-3. **GPU 进程反复崩溃**（`0xC0000005` + 缓存目录占用）：已在内置代码里关闭 GPU 合成与 GPU 沙箱（`disable-gpu` / `disable-gpu-compositing` / `disable-gpu-sandbox` + `disableHardwareAcceleration`）。文本应用不需要硬件加速，这个改动对真实用户只省电不降级。
+### 4. 交互细节
 
-## 怎么验收
+行内编辑组件 `EditableText`：平时是文字，悬停出细边，聚焦出蓝边，失焦自动保存，空值不落库——符合「界面干净、不打扰」的哲学。
+
+## 验证
+
+```
+npm run typecheck   ✅ 通过
+npm run build       ✅ 通过（renderer 922kB）
+npm test            ✅ 7 passed
+npm run dev         ✅ 窗口正常启动，无 GPU 报错
+```
+
+## 验收方法
 
 ```bash
 cd D:\CodeLab\我是我V2.0
 npm run dev
 ```
 
-应看到：左侧栏「我是我 V2.0」+ 七个导航 + 底部设置；首页有主标题、三条提示、底部输入框；点侧栏「设置」切深色主题立刻生效；「我是我」页顶部有核心思想引文。
+建议按这个顺序点一遍：
+1. 现状 → 选「资产」→ 输入「有一辆电瓶车」→ 回车
+2. 目标 → 短期输入「三个月后想看到健身效果」→ 回车
+3. 行动 → 自己写一个矛盾 → 添加两条步骤 → 勾掉一条
+4. 行动 → 标记已解决 → 写一句「先动手比想清楚重要」→ 保存并完成
+5. 我是我 → 看到刚写的那句感悟在顶部
+6. 见证成长 → 看到时间线上出现刚解决的矛盾
+7. 复盘 → 写第一篇（离开页面再回来，内容还在）
 
-## 下一步（Phase 1）
+## 已知取舍
 
-Dexie 数据库：11 张表 + seq 字段 + 游标 + 快照字段，独立 `reflections` 库，schema 迁移测试；接上现状/目标/行动/复盘的真实 CRUD。
+- 排序暂时是「添加顺序」，拖拽排序留到 Phase 2/5（需引入拖拽库，不想为它增加体积）
+- 首页聊天还是静态的（Phase 2 接入会话 + 草案确认）
+- 数据概览放在设置页而非单独统计页（保持信息克制）
 
-## 遗留
+## 下一步（Phase 2）
 
-- 数据目录放程序目录 `data/`（评审 D4）：这意味着「换目录 = 换数据」。如果你希望数据固定在某处（如 `%APPDATA%` 或用户自选），现在改成本最低。
-- 示例会话草案不可点、两条提示合并为一张卡（评审 D5/D9）：Phase 2 实现首页聊天时会按此做。
+会话与消息的真实存储、首页聊天界面、草案解析器与确认卡片（含可编辑的矛盾+行动）、预置示例会话（`kind: 'sample'`，草案不可点）。

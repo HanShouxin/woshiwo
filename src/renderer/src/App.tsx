@@ -10,10 +10,15 @@ import Reviews from './pages/Reviews'
 import Self from './pages/Self'
 import Settings from './pages/Settings'
 import { applyTheme, onSystemThemeChange, readTheme } from './lib/theme'
+import type { ThemeMode } from './lib/theme'
+import { getSetting } from './db/repo'
 
 export default function App(): React.JSX.Element {
   useEffect(() => {
+    // 先用本地缓存立刻上色，避免首屏闪白；再从数据库取权威值覆盖
     applyTheme(readTheme())
+    void getSetting<ThemeMode>('theme', readTheme()).then((mode) => applyTheme(mode))
+
     return onSystemThemeChange(() => {
       if (readTheme() === 'system') applyTheme('system')
     })

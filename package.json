@@ -12,9 +12,12 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "test": "vitest run",
     "dist": "npm run build && electron-builder --dir --win --x64"
   },
   "dependencies": {
+    "dexie": "^4.4.7",
+    "dexie-react-hooks": "^4.4.0",
     "lucide-react": "^1.61.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -28,7 +31,9 @@
     "electron": "^45.0.0",
     "electron-builder": "^26.15.3",
     "electron-vite": "^6.0.0",
+    "fake-indexeddb": "^6.2.6",
     "typescript": "^5.9.0",
-    "vite": "^8.3.5"
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   }
 }

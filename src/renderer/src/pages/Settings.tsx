@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
 import Page from '../components/Page'
 import { applyTheme, readTheme, writeTheme } from '../lib/theme'
 import type { ThemeMode } from '../lib/theme'
+import { getOverview, getSetting, setSetting } from '../db/repo'
+
 import type { AppInfo } from '../../../shared/constants'
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemeMode; label: string }> = [
@@ -11,8 +14,18 @@ const THEME_OPTIONS: ReadonlyArray<{ value: ThemeMode; label: string }> = [
 ]
 
 export default function Settings(): React.JSX.Element {
+  const stored = useLiveQuery(
+    () => getSetting<ThemeMode>('theme', 'system'),
+    [],
+    'system'
+  )
+  const overview = useLiveQuery(getOverview, [], undefined)
   const [theme, setTheme] = useState<ThemeMode>(readTheme)
   const [info, setInfo] = useState<AppInfo | null>(null)
+
+  useEffect(() => {
+    if (stored) setTheme(stored)
+  }, [stored])
 
   useEffect(() => {
     applyTheme(theme)
@@ -31,7 +44,19 @@ export default function Settings(): React.JSX.Element {
   function chooseTheme(next: ThemeMode): void {
     setTheme(next)
     writeTheme(next)
+    void setSetting('theme', next)
   }
+
+  const rows: ReadonlyArray<{ label: string; value: number | undefined }> = [
+    { label: '现状档案', value: overview?.profileCards },
+    { label: '目标', value: overview?.goals },
+    { label: '矛盾', value: overview?.contradictions },
+    { label: '行动', value: overview?.actions },
+    { label: '感悟', value: overview?.viewpoints },
+    { label: '复盘', value: overview?.reflections },
+    { label: '对话', value: overview?.sessions },
+    { label: '长期记忆', value: overview?.memories }
+  ]
 
   return (
     <Page title="设置" desc="一次配好，之后基本不用再进来。">
@@ -66,10 +91,14 @@ export default function Settings(): React.JSX.Element {
       </section>
 
       <section className="section">
-        <h2 className="section__title">数据与备份</h2>
-        <p className="section__desc">
-          所有数据保存在本机。换电脑或重装前，记得导出一份备份。
-        </p>
+        <h2 className="section__title">数据</h2>
+        <p className="section__desc">所有数据保存在本机，这是你目前拥有的全部记录。</p>
+        {rows.map((row) => (
+          <div className="field-row" key={row.label}>
+            <span className="field-row__label">{row.label}</span>
+            <span className="field-row__value">{row.value ?? '—'}</span>
+          </div>
+        ))}
         <div className="field-row">
           <span className="field-row__label">数据目录</span>
           <span className="field-row__value muted">{info?.dataDir ?? '读取中…'}</span>

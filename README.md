@@ -6,13 +6,18 @@
 
 ## 现在是什么状态
 
-**Phase 0 完成**：工程骨架、七个页面、深浅主题、便携数据目录、单实例锁、IPC 白名单。AI 与本地数据尚未接入（Phase 1–3）。
+**Phase 0 完成**：工程骨架、七个页面、深浅主题、便携数据目录、单实例锁、IPC 白名单。
+
+**Phase 1 完成**：本地数据层与真实 CRUD —— 11 张表（含独立复盘库）、现状/目标/行动/我是我/复盘/见证成长全部接上真实数据、矛盾生命周期（设定→替换归档→解决→进时间线）、7 个数据层测试。
+
+**尚未接入**：AI 对话、草案确认卡片、记忆整合、备份导入导出（Phase 2–4）。
 
 ## 开发
 
 ```bash
 npm install
 npm run dev        # 启动开发窗口（热更新）
+npm run test       # 数据层测试（fake-indexeddb）
 npm run typecheck  # 类型检查
 npm run build      # 生产构建到 out/
 npm run dist       # 打包便携版到 release/（Phase 5）
