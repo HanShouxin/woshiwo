@@ -75,14 +75,26 @@ export interface AppInfo {
 
 export type AIProvider = 'openai' | 'ollama'
 
-/** 单配置：一个 Key / 一个地址 / 一个模型（不含 Key 明文，Key 只在主进程） */
+/** 一次请求要用的连接参数（不含 Key 明文，Key 只在主进程） */
 export interface AIConfig {
   provider: AIProvider
   baseUrl: string
   model: string
 }
 
+/**
+ * 一条已保存的配置（存在 appSettings.aiConfigs 里）。
+ * Key 不在这里 —— 主进程按 id 单独加密保存。
+ */
+export interface AIConfigEntry extends AIConfig {
+  id: string
+  /** 配置名称，比如「百炼」「公司 Ollama」 */
+  name: string
+  updatedAt: string
+}
+
 export const DEFAULT_OLLAMA_BASE = 'http://localhost:11434/v1'
+export const OPENAI_BASE_PLACEHOLDER = 'https://api.deepseek.com/v1'
 
 /** 当前会话送进模型的最近消息条数 */
 export const MAX_CONTEXT_MESSAGES = 20

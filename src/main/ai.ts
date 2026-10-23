@@ -1,5 +1,5 @@
 import { app, ipcMain, safeStorage } from 'electron'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { WebContents } from 'electron'
 import type { AIConfig, ChatTurn } from '../shared/constants'
@@ -9,27 +9,33 @@ import type { AIConfig, ChatTurn } from '../shared/constants'
  * 1) 渲染进程拿不到 API Key；
  * 2) 不受渲染层 CORS / CSP 限制；
  * 3) 流式分块通过 ai:delta 事件推回渲染进程。
+ *
+ * Key 按配置 id 各自加密保存（一条配置一个 Key），测试连接可以用临时 Key 而不落盘。
  */
 
 const controllers = new Map<string, AbortController>()
 
-function keyFile(): string {
-  return join(app.getPath('userData'), 'ai-key.bin')
+function keysDir(): string {
+  return join(app.getPath('userData'), 'ai-keys')
 }
 
-function saveKey(key: string): boolean {
-  const path = keyFile()
+function keyPathFor(configId: string): string {
+  const safeId = configId.replace(/[^a-zA-Z0-9-]/g, '')
+  return join(keysDir(), `${safeId || 'default'}.bin`)
+}
+
+function saveKey(configId: string, key: string): boolean {
   try {
+    mkdirSync(keysDir(), { recursive: true })
+    const path = keyPathFor(configId)
     if (!key) {
       writeFileSync(path, Buffer.alloc(0))
       return true
     }
-    if (safeStorage.isEncryptionAvailable()) {
-      writeFileSync(path, safeStorage.encryptString(key))
-    } else {
-      // 系统不支持加密时退回本地明文文件（仅本机，不进数据库与备份）
-      writeFileSync(path, Buffer.from(key, 'utf8'))
-    }
+    writeFileSync(
+      path,
+      safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(key) : Buffer.from(key, 'utf8')
+    )
     return true
   } catch (error) {
     console.error('[ai] 保存密钥失败', error)
@@ -37,10 +43,11 @@ function saveKey(key: string): boolean {
   }
 }
 
-function loadKey(): string {
+function loadKey(configId: string): string {
   try {
-    if (!existsSync(keyFile())) return ''
-    const buffer = readFileSync(keyFile())
+    const path = keyPathFor(configId)
+    if (!existsSync(path)) return ''
+    const buffer = readFileSync(path)
     if (buffer.length === 0) return ''
     if (safeStorage.isEncryptionAvailable()) {
       try {
@@ -52,6 +59,16 @@ function loadKey(): string {
     return buffer.toString('utf8')
   } catch {
     return ''
+  }
+}
+
+function deleteKey(configId: string): boolean {
+  try {
+    const path = keyPathFor(configId)
+    if (existsSync(path)) unlinkSync(path)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -86,18 +103,18 @@ async function streamCompletion(
   sender: WebContents,
   requestId: string,
   config: AIConfig,
-  messages: ChatTurn[]
+  messages: ChatTurn[],
+  apiKey: string
 ): Promise<{ ok: boolean; text: string; aborted?: boolean; error?: string }> {
   const controller = new AbortController()
   controllers.set(requestId, controller)
-  const key = loadKey()
 
   try {
     const response = await fetch(chatUrl(config), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(key ? { Authorization: `Bearer ${key}` } : {})
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
       },
       body: JSON.stringify({
         model: config.model,
@@ -157,14 +174,28 @@ async function streamCompletion(
 }
 
 export function registerAiIpc(): void {
-  ipcMain.handle('key:set', (_event, key: string) => saveKey(key))
+  ipcMain.handle('key:set', (_event, configId: string, key: string) => saveKey(configId, key))
 
-  ipcMain.handle('key:has', () => loadKey().length > 0)
+  ipcMain.handle('key:has', (_event, configId: string) => loadKey(configId).length > 0)
+
+  ipcMain.handle('key:delete', (_event, configId: string) => deleteKey(configId))
 
   ipcMain.handle(
     'ai:chat',
-    (event, payload: { requestId: string; config: AIConfig; messages: ChatTurn[] }) =>
-      streamCompletion(event.sender, payload.requestId, payload.config, payload.messages)
+    (
+      event,
+      payload: {
+        requestId: string
+        config: AIConfig
+        messages: ChatTurn[]
+        configId?: string
+        tempKey?: string
+      }
+    ) => {
+      // 测试连接传 tempKey（临时用，不落盘）；正式对话按 configId 取已保存的 Key
+      const apiKey = payload.tempKey?.trim() || (payload.configId ? loadKey(payload.configId) : '')
+      return streamCompletion(event.sender, payload.requestId, payload.config, payload.messages, apiKey)
+    }
   )
 
   ipcMain.handle('ai:abort', (_event, requestId: string) => {
@@ -172,17 +203,17 @@ export function registerAiIpc(): void {
     return true
   })
 
-  ipcMain.handle('ai:models', async (_event, config: AIConfig) => {
-    const key = loadKey()
+  ipcMain.handle('ai:models', async (_event, payload: { config: AIConfig; configId?: string }) => {
+    const apiKey = payload.configId ? loadKey(payload.configId) : ''
     try {
-      const response = await fetch(modelsUrl(config), {
-        headers: key ? { Authorization: `Bearer ${key}` } : {}
+      const response = await fetch(modelsUrl(payload.config), {
+        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {}
       })
       if (!response.ok) {
         return { ok: false, models: [] as string[], error: `HTTP ${response.status}` }
       }
       const json: unknown = await response.json()
-      if (config.provider === 'ollama') {
+      if (payload.config.provider === 'ollama') {
         const list = (json as { models?: Array<{ name?: string }> }).models ?? []
         return { ok: true, models: list.map((item) => item.name ?? '').filter(Boolean) }
       }

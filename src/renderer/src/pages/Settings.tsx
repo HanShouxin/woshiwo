@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { Eye, EyeOff, List, Trash2 } from 'lucide-react'
 import Page from '../components/Page'
 import { applyTheme, readTheme, writeTheme } from '../lib/theme'
 import type { ThemeMode } from '../lib/theme'
 import { getOverview, getSetting, setSetting } from '../db/repo'
-import { listModels, startChat } from '../ai/client'
-import { DEFAULT_OLLAMA_BASE } from '../../../shared/constants'
-import type { AIProvider, AIConfig, AppInfo } from '../../../shared/constants'
+import { startChat } from '../ai/client'
+import { DEFAULT_OLLAMA_BASE, OPENAI_BASE_PLACEHOLDER } from '../../../shared/constants'
+import type { AIProvider, AIConfigEntry, AppInfo } from '../../../shared/constants'
 
 const THEME_OPTIONS: ReadonlyArray<{ value: ThemeMode; label: string }> = [
   { value: 'light', label: '浅色' },
@@ -19,13 +20,20 @@ const PROVIDERS: ReadonlyArray<{ value: AIProvider; label: string }> = [
   { value: 'ollama', label: 'Ollama 本地' }
 ]
 
-const EMPTY_CONFIG: AIConfig = { provider: 'openai', baseUrl: '', model: '' }
+interface FormState {
+  name: string
+  provider: AIProvider
+  baseUrl: string
+  model: string
+}
+
+const EMPTY_FORM: FormState = { name: '', provider: 'openai', baseUrl: '', model: '' }
 
 /** 把服务商返回的原始报错翻译成一句人话 */
 function friendlyError(error?: string): string {
   if (!error) return '未知错误'
   if (error.includes('401') || /api[- ]?key/i.test(error)) {
-    return '密钥无效或未被接受（401）。检查 Key 是否完整、是否属于这个平台'
+    return '密钥无效或未被接受（401）。检查 API-KEY 是否完整、是否属于这个平台'
   }
   if (error.includes('403')) return '密钥没有访问该模型的权限（403）'
   if (error.includes('404')) return '接口地址或模型名不对（404）。地址通常以 /v1 结尾'
@@ -42,10 +50,13 @@ export default function Settings(): React.JSX.Element {
   const [theme, setTheme] = useState<ThemeMode>(readTheme)
   const [info, setInfo] = useState<AppInfo | null>(null)
 
-  const [config, setConfig] = useState<AIConfig>(EMPTY_CONFIG)
-  const [keyInput, setKeyInput] = useState('')
-  const [hasKey, setHasKey] = useState(false)
-  const [models, setModels] = useState<string[]>([])
+  const [configs, setConfigs] = useState<AIConfigEntry[]>([])
+  const [activeId, setActiveId] = useState('')
+  const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [apiKey, setApiKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [keySaved, setKeySaved] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
 
@@ -62,12 +73,25 @@ export default function Settings(): React.JSX.Element {
     void window.woshiwo?.appInfo().then((data) => {
       if (alive) setInfo(data)
     })
-    void getSetting<AIConfig | null>('aiConfig', null).then((saved) => {
-      if (alive && saved) setConfig(saved)
-    })
-    void window.woshiwo?.ai.hasKey().then((exists) => {
-      if (alive) setHasKey(exists)
-    })
+
+    void (async () => {
+      const list = await getSetting<AIConfigEntry[]>('aiConfigs', [])
+      const savedId = await getSetting<string>('activeConfigId', '')
+      if (!alive) return
+      setConfigs(list)
+      const active = list.find((item) => item.id === savedId) ?? list[0]
+      if (!active) return
+      setActiveId(active.id)
+      setForm({
+        name: active.name,
+        provider: active.provider,
+        baseUrl: active.baseUrl,
+        model: active.model
+      })
+      const has = await window.woshiwo.ai.hasKey(active.id)
+      if (alive) setKeySaved(has)
+    })()
+
     return () => {
       alive = false
     }
@@ -79,104 +103,69 @@ export default function Settings(): React.JSX.Element {
     void setSetting('theme', next)
   }
 
+  /** 切换服务商只改 provider：已填的内容一律保留，不丢数据 */
   function changeProvider(provider: AIProvider): void {
-    // 换服务商 → 表单重置（地址与模型都清空，地址给默认值）
-    setConfig({
+    setForm((prev) => ({
+      ...prev,
       provider,
-      baseUrl: provider === 'ollama' ? DEFAULT_OLLAMA_BASE : '',
-      model: ''
-    })
-    setModels([])
+      baseUrl:
+        prev.baseUrl ||
+        (provider === 'ollama' ? DEFAULT_OLLAMA_BASE : '')
+    }))
     setStatus('')
   }
 
-  function changeBaseUrl(value: string): void {
-    // 换地址 → 模型名清空重选（不同服务的可用模型不同）
-    setConfig((prev) => ({ ...prev, baseUrl: value, model: '' }))
+  async function selectConfig(entry: AIConfigEntry): Promise<void> {
+    setActiveId(entry.id)
+    setForm({
+      name: entry.name,
+      provider: entry.provider,
+      baseUrl: entry.baseUrl,
+      model: entry.model
+    })
+    setApiKey('')
+    setShowKey(false)
+    setPickerOpen(false)
+    setStatus('')
+    setKeySaved(await window.woshiwo.ai.hasKey(entry.id))
+    await setSetting('activeConfigId', entry.id)
   }
 
-  async function saveConfig(): Promise<void> {
-    const baseUrl = config.baseUrl.trim()
-    if (!baseUrl) {
-      setStatus('请填写接口地址')
-      return
-    }
-    const keyChanged = keyInput.trim().length > 0
-    const next: AIConfig = {
-      provider: config.provider,
-      baseUrl,
-      // 换了 Key → 模型名清空重选
-      model: keyChanged ? '' : config.model.trim()
-    }
-    await setSetting('aiConfig', next)
-    setConfig(next)
-
-    if (keyChanged) {
-      const saved = await window.woshiwo.ai.setKey(keyInput.trim())
-      if (!saved) {
-        setStatus('密钥保存失败，请重试')
-        return
-      }
-      setHasKey(true)
-      setKeyInput('')
-      setStatus('密钥已更新，请重新选择模型名')
-      return
-    }
-    if (config.provider === 'ollama' && keyInput.trim() === '' && !hasKey) {
-      await window.woshiwo.ai.setKey('')
-    }
-    setStatus('已保存')
-  }
-
-  async function fetchModels(): Promise<void> {
-    setBusy(true)
-    setStatus('正在获取模型列表…')
-    const result = await listModels({ ...config, baseUrl: config.baseUrl.trim() })
-    setBusy(false)
-    if (result.ok) {
-      setModels(result.models)
-      setStatus(result.models.length > 0 ? `拿到 ${result.models.length} 个模型` : '没有取到模型')
-    } else {
-      setStatus(`获取失败：${result.error ?? '检查地址是否正确'}`)
-    }
+  async function newConfig(): Promise<void> {
+    setActiveId('')
+    setForm(EMPTY_FORM)
+    setApiKey('')
+    setShowKey(false)
+    setKeySaved(false)
+    setPickerOpen(false)
+    setStatus('')
+    await setSetting('activeConfigId', '')
   }
 
   async function testConnection(): Promise<void> {
-    const baseUrl = config.baseUrl.trim()
-    const model = config.model.trim()
+    const baseUrl = form.baseUrl.trim()
+    const model = form.model.trim()
     if (!baseUrl) {
       setStatus('先填接口地址')
       return
     }
     if (!model) {
-      setStatus('先填模型名，再测试')
+      setStatus('先填模型名')
       return
     }
-    if (config.provider === 'openai' && !keyInput.trim() && !hasKey) {
-      setStatus('先填密钥，再测试')
+    if (form.provider === 'openai' && !apiKey.trim() && !keySaved) {
+      setStatus('先填 API-KEY')
       return
     }
 
     setBusy(true)
     setStatus('正在连接…')
 
-    // 测试前先把当前配置和密钥落到主进程 —— 它手里有 Key，请求才会带上 Authorization
-    const next: AIConfig = { provider: config.provider, baseUrl, model }
-    await setSetting('aiConfig', next)
-    setConfig(next)
-    if (keyInput.trim()) {
-      const saved = await window.woshiwo.ai.setKey(keyInput.trim())
-      if (!saved) {
-        setBusy(false)
-        setStatus('密钥保存失败，请重试')
-        return
-      }
-      setHasKey(true)
-      setKeyInput('')
-    }
-
+    // 测试用临时 Key（不落盘）；若已经保存过 Key，就用已保存的那份
     const handle = startChat({
-      config: next,
+      config: { provider: form.provider, baseUrl, model },
+      configId: activeId || undefined,
+      tempKey: apiKey.trim() || undefined,
       messages: [
         { role: 'system', content: '你是一个连接测试助手，回答保持在一句话以内。' },
         { role: 'user', content: '请用一句话说明你已经就位。' }
@@ -184,11 +173,76 @@ export default function Settings(): React.JSX.Element {
     })
     const result = await handle.done
     setBusy(false)
+
     if (result.ok) {
       const reply = result.text.trim()
-      setStatus(reply ? `连接成功 · ${reply.slice(0, 60)}` : '连接成功，但模型没有返回内容（检查模型名是否为对话模型）')
+      setStatus(
+        reply
+          ? `连接成功 · ${reply.slice(0, 60)}`
+          : '连接成功，但模型没有返回内容（检查模型名是否为对话模型）'
+      )
     } else {
       setStatus(`连接失败：${friendlyError(result.error)}`)
+    }
+  }
+
+  async function saveConfig(): Promise<void> {
+    const name = form.name.trim()
+    const baseUrl = form.baseUrl.trim()
+    const model = form.model.trim()
+    if (!name) {
+      setStatus('给这个配置起个名字，下次才选得回来')
+      return
+    }
+    if (!baseUrl) {
+      setStatus('接口地址不能为空')
+      return
+    }
+    if (!model) {
+      setStatus('模型名不能为空')
+      return
+    }
+
+    const id = activeId || crypto.randomUUID()
+    const entry: AIConfigEntry = {
+      id,
+      name,
+      provider: form.provider,
+      baseUrl,
+      model,
+      updatedAt: new Date().toISOString()
+    }
+    const next = [...configs]
+    const index = next.findIndex((item) => item.id === id)
+    if (index >= 0) next[index] = entry
+    else next.push(entry)
+
+    await setSetting('aiConfigs', next)
+    await setSetting('activeConfigId', id)
+    setConfigs(next)
+    setActiveId(id)
+
+    if (apiKey.trim()) {
+      const ok = await window.woshiwo.ai.setKey(id, apiKey.trim())
+      if (!ok) {
+        setStatus('密钥保存失败，请重试')
+        return
+      }
+      setKeySaved(true)
+      setApiKey('')
+      setShowKey(false)
+    }
+
+    setStatus('已保存，之后会自动使用这个配置')
+  }
+
+  async function removeConfig(id: string): Promise<void> {
+    const next = configs.filter((item) => item.id !== id)
+    await setSetting('aiConfigs', next)
+    setConfigs(next)
+    await window.woshiwo.ai.deleteKey(id)
+    if (activeId === id) {
+      await newConfig()
     }
   }
 
@@ -227,103 +281,158 @@ export default function Settings(): React.JSX.Element {
       <section className="section">
         <h2 className="section__title">AI 模型连接</h2>
         <p className="section__desc">
-          单配置：一个密钥、一个地址、一个模型。同一个密钥下换模型名不影响其他设置；换密钥或换地址需要重新选择模型。
-          密钥只保存在本机，不进入数据库与备份。
+          填好之后先测试连接，通过再保存。保存时给它起个名字，以后可以随时从这里选回来。
+          API-KEY 只保存在本机，不进入数据库与备份。
         </p>
 
-        <div className="segmented" style={{ marginBottom: 14 }}>
-          {PROVIDERS.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              className={`segmented__item${
-                config.provider === item.value ? ' segmented__item--active' : ''
-              }`}
-              onClick={() => changeProvider(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+        <div className="ai-card">
+          <div className="ai-provider-row">
+            <div className="segmented">
+              {PROVIDERS.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={`segmented__item${
+                    form.provider === item.value ? ' segmented__item--active' : ''
+                  }`}
+                  onClick={() => changeProvider(item.value)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
 
-        <div className="form-grid">
-          <label className="form-field">
-            <span className="form-field__label">接口地址</span>
-            <input
-              className="add-input"
-              placeholder={
-                config.provider === 'ollama'
-                  ? DEFAULT_OLLAMA_BASE
-                  : 'https://api.deepseek.com/v1'
-              }
-              value={config.baseUrl}
-              onChange={(event) => changeBaseUrl(event.target.value)}
-            />
-          </label>
-
-          <label className="form-field">
-            <span className="form-field__label">
-              密钥 {hasKey ? '· 已保存' : config.provider === 'ollama' ? '· 可选' : '· 必填'}
-            </span>
-            <input
-              className="add-input"
-              type="password"
-              placeholder={hasKey ? '已保存，如需更换请输入新的' : 'sk-…'}
-              value={keyInput}
-              onChange={(event) => setKeyInput(event.target.value)}
-            />
-          </label>
-
-          <label className="form-field">
-            <span className="form-field__label">模型名</span>
-            <div className="form-inline">
-              <input
-                className="add-input"
-                list="model-options"
-                placeholder="例如 deepseek-chat / qwen2.5:7b"
-                value={config.model}
-                onChange={(event) =>
-                  setConfig((prev) => ({ ...prev, model: event.target.value }))
-                }
-              />
-              <datalist id="model-options">
-                {models.map((model) => (
-                  <option key={model} value={model} />
-                ))}
-              </datalist>
+            <div className="config-picker">
               <button
                 type="button"
                 className="btn"
-                disabled={busy || !config.baseUrl.trim()}
-                onClick={() => void fetchModels()}
+                onClick={() => setPickerOpen((value) => !value)}
               >
-                获取列表
+                <List size={13} strokeWidth={2} />
+                已保存配置{configs.length > 0 ? ` (${configs.length})` : ''}
               </button>
+
+              {pickerOpen ? (
+                <div className="config-pop">
+                  {configs.length === 0 ? (
+                    <p className="config-pop__empty">还没有保存过配置</p>
+                  ) : (
+                    configs.map((entry) => (
+                      <div key={entry.id} className="config-row">
+                        <button
+                          type="button"
+                          className="config-row__main"
+                          onClick={() => void selectConfig(entry)}
+                        >
+                          <span className="config-row__name">
+                            {entry.name}
+                            {entry.id === activeId ? ' · 使用中' : ''}
+                          </span>
+                          <span className="config-row__meta">
+                            {entry.provider === 'ollama' ? 'Ollama' : 'OpenAI 兼容'} · {entry.model}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className="config-row__del"
+                          title="删除这个配置"
+                          onClick={() => void removeConfig(entry.id)}
+                        >
+                          <Trash2 size={13} strokeWidth={2} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                  <button type="button" className="config-row__new" onClick={() => void newConfig()}>
+                    ＋ 新建配置
+                  </button>
+                </div>
+              ) : null}
             </div>
-          </label>
+          </div>
+
+          <div className="ai-form">
+            <label className="form-field">
+              <span className="form-field__label">配置名称</span>
+              <input
+                className="add-input"
+                placeholder="比如 百炼 / 公司 Ollama"
+                value={form.name}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              />
+            </label>
+
+            <label className="form-field">
+              <span className="form-field__label">模型名</span>
+              <input
+                className="add-input"
+                placeholder={form.provider === 'ollama' ? 'qwen2.5:7b' : 'deepseek-chat'}
+                value={form.model}
+                onChange={(event) => setForm((prev) => ({ ...prev, model: event.target.value }))}
+              />
+            </label>
+
+            <label className="form-field">
+              <span className="form-field__label">接口地址</span>
+              <input
+                className="add-input"
+                placeholder={
+                  form.provider === 'ollama' ? DEFAULT_OLLAMA_BASE : OPENAI_BASE_PLACEHOLDER
+                }
+                value={form.baseUrl}
+                onChange={(event) => setForm((prev) => ({ ...prev, baseUrl: event.target.value }))}
+              />
+            </label>
+
+            <label className="form-field">
+              <span className="form-field__label">
+                API-KEY
+                {keySaved ? ' · 已保存' : form.provider === 'ollama' ? ' · 可选' : ''}
+              </span>
+              <div className="pwd-wrap">
+                <input
+                  className="add-input"
+                  type={showKey ? 'text' : 'password'}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder={keySaved ? '已保存，如需更换请输入新的' : 'sk-…'}
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                />
+                <button
+                  type="button"
+                  className="pwd-eye"
+                  title={showKey ? '隐藏' : '显示'}
+                  onClick={() => setShowKey((value) => !value)}
+                >
+                  {showKey ? <EyeOff size={15} strokeWidth={1.75} /> : <Eye size={15} strokeWidth={1.75} />}
+                </button>
+              </div>
+            </label>
+          </div>
+
+          <div className="ai-actions">
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => void testConnection()}
+            >
+              测试连接
+            </button>
+            <button
+              type="button"
+              className="btn btn--primary"
+              disabled={busy}
+              onClick={() => void saveConfig()}
+            >
+              保存配置
+            </button>
+            {status ? <span className="muted">{status}</span> : null}
+          </div>
         </div>
 
-        <div className="add-row">
-          <button
-            type="button"
-            className="btn btn--primary"
-            disabled={busy}
-            onClick={() => void saveConfig()}
-          >
-            保存配置
-          </button>
-          <button
-            type="button"
-            className="btn"
-            disabled={busy || !config.model.trim()}
-            onClick={() => void testConnection()}
-          >
-            测试连接
-          </button>
-          {status ? <span className="muted">{status}</span> : null}
-        </div>
-
-        {config.provider === 'openai' ? (
+        {form.provider === 'openai' ? (
           <p className="muted" style={{ marginTop: 10 }}>
             使用远程模型时，对话上下文会发送到你填写的服务商；想让数据完全不出设备，请用本地 Ollama。
           </p>

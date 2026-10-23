@@ -16,7 +16,7 @@ import {
 } from '../db/chatRepo'
 import { addAction, getSetting, setCurrentContradiction } from '../db/repo'
 import { SETTINGS_PATH } from '../../../shared/constants'
-import type { AIConfig, DraftPayload } from '../../../shared/constants'
+import type { AIConfigEntry, DraftPayload } from '../../../shared/constants'
 
 const PROMPTS = [
   '最近有点迷茫，不知道应该先做什么。',
@@ -53,15 +53,24 @@ export default function Home(): React.JSX.Element {
   const [input, setInput] = useState('')
   const [notice, setNotice] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [config, setConfig] = useState<AIConfig | null>(null)
   const [liveText, setLiveText] = useState('')
   const [streamId, setStreamId] = useState<string | null>(null)
   const liveRef = useRef('')
   const streamRef = useRef<string | null>(null)
 
+  // 设置页保存配置后这里会自动更新（appSettings 变化会触发 live query）
+  const config = useLiveQuery(
+    async () => {
+      const list = await getSetting<AIConfigEntry[]>('aiConfigs', [])
+      const savedId = await getSetting<string>('activeConfigId', '')
+      return list.find((item) => item.id === savedId) ?? list[0] ?? null
+    },
+    [],
+    null
+  )
+
   useEffect(() => {
     void ensureSampleSession()
-    void getSetting<AIConfig | null>('aiConfig', null).then(setConfig)
     return () => {
       // 离开页面时停掉未完成的请求，避免后台空转
       if (streamRef.current) abortChat(streamRef.current)
@@ -118,6 +127,7 @@ export default function Home(): React.JSX.Element {
     setLiveText('')
     const handle = startChat({
       config,
+      configId: config.id,
       messages: turns,
       onDelta: (chunk) => {
         liveRef.current += chunk
@@ -302,7 +312,7 @@ export default function Home(): React.JSX.Element {
                     style={modelReady ? { background: 'var(--accent)' } : undefined}
                   />
                   {modelReady
-                    ? `${config?.provider === 'ollama' ? 'Ollama' : 'OpenAI 兼容'} · ${config?.model}`
+                    ? `${config?.name} · ${config?.model}`
                     : '未配置 AI · 去设置'}
                 </Link>
                 {streamId ? (

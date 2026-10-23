@@ -16,6 +16,10 @@ export interface ChatHandle {
 export function startChat(params: {
   config: AIConfig
   messages: ChatTurn[]
+  /** 正式对话：已保存配置的 id（主进程据此取 Key） */
+  configId?: string
+  /** 测试连接：临时 Key，不落盘 */
+  tempKey?: string
   onDelta?: (text: string) => void
 }): ChatHandle {
   const requestId = crypto.randomUUID()
@@ -24,7 +28,13 @@ export function startChat(params: {
   })
 
   const done = window.woshiwo.ai
-    .chat({ requestId, config: params.config, messages: params.messages })
+    .chat({
+      requestId,
+      config: params.config,
+      messages: params.messages,
+      configId: params.configId,
+      tempKey: params.tempKey
+    })
     .finally(off)
 
   return { requestId, done }
@@ -34,5 +44,8 @@ export function abortChat(requestId: string): void {
   void window.woshiwo.ai.abort(requestId)
 }
 
-export const listModels = (config: AIConfig): Promise<{ ok: boolean; models: string[]; error?: string }> =>
-  window.woshiwo.ai.listModels(config)
+export const listModels = (payload: {
+  config: AIConfig
+  configId?: string
+}): Promise<{ ok: boolean; models: string[]; error?: string }> =>
+  window.woshiwo.ai.listModels(payload)

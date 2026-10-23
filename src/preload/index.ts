@@ -7,9 +7,19 @@ interface DeltaPayload {
   text: string
 }
 
+interface ChatPayload {
+  requestId: string
+  config: AIConfig
+  messages: ChatTurn[]
+  /** 正式对话：按配置 id 取已保存的 Key */
+  configId?: string
+  /** 测试连接：临时 Key，不落盘 */
+  tempKey?: string
+}
+
 /**
  * 白名单 IPC —— 渲染进程只能看到这里暴露的方法。
- * API Key 只走 key:set 单向传入主进程，之后渲染进程再也读不到它。
+ * API Key 只走单向传入主进程，之后渲染进程再也读不到它。
  */
 const api = {
   appInfo: () =>
@@ -20,9 +30,11 @@ const api = {
     }>,
   platform: process.platform,
   ai: {
-    setKey: (key: string) => ipcRenderer.invoke('key:set', key) as Promise<boolean>,
-    hasKey: () => ipcRenderer.invoke('key:has') as Promise<boolean>,
-    chat: (payload: { requestId: string; config: AIConfig; messages: ChatTurn[] }) =>
+    setKey: (configId: string, key: string) =>
+      ipcRenderer.invoke('key:set', configId, key) as Promise<boolean>,
+    hasKey: (configId: string) => ipcRenderer.invoke('key:has', configId) as Promise<boolean>,
+    deleteKey: (configId: string) => ipcRenderer.invoke('key:delete', configId) as Promise<boolean>,
+    chat: (payload: ChatPayload) =>
       ipcRenderer.invoke('ai:chat', payload) as Promise<{
         ok: boolean
         text: string
@@ -30,8 +42,8 @@ const api = {
         error?: string
       }>,
     abort: (requestId: string) => ipcRenderer.invoke('ai:abort', requestId) as Promise<boolean>,
-    listModels: (config: AIConfig) =>
-      ipcRenderer.invoke('ai:models', config) as Promise<{
+    listModels: (payload: { config: AIConfig; configId?: string }) =>
+      ipcRenderer.invoke('ai:models', payload) as Promise<{
         ok: boolean
         models: string[]
         error?: string
