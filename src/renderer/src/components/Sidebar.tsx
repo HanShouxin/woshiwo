@@ -22,13 +22,44 @@ const ICONS: Record<string, LucideIcon> = {
   '/growth': TrendingUp
 }
 
+/**
+ * 品牌印记：一笔未合拢的圆 + 中心一点。
+ * 圆是自性，点是「我」；缺口留白，取「今日方知」的那个瞬间。
+ */
+function BrandMark(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 28 28" width="25" height="25" aria-hidden="true">
+      <circle
+        cx="14"
+        cy="14"
+        r="10.4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+        strokeDasharray="55 10"
+        transform="rotate(-38 14 14)"
+      />
+      <circle cx="14" cy="14" r="2.9" fill="currentColor" />
+    </svg>
+  )
+}
+
 export default function Sidebar(): React.JSX.Element {
   return (
     <aside className="sidebar">
       <div className="sidebar__brand">
+        <span className="brand-mark">
+          <BrandMark />
+        </span>
         <span className="sidebar__brand-name">我是我</span>
-        <span className="sidebar__brand-sub">V2.0</span>
       </div>
+
+      <p className="sidebar__motto">
+        钱塘江上潮信来
+        <br />
+        今日方知我是我
+      </p>
 
       <nav className="nav">
         {NAV_ITEMS.map((item) => {

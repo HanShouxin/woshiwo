@@ -473,7 +473,17 @@ export default function Settings(): React.JSX.Element {
             >
               保存配置
             </button>
-            {status ? <span className="muted">{status}</span> : null}
+            {status ? (
+              <span
+                className={`status-text${
+                  status.startsWith('连接成功') || status.startsWith('已保存')
+                    ? ' status-text--ok'
+                    : ''
+                }`}
+              >
+                {status}
+              </span>
+            ) : null}
           </div>
         </div>
 

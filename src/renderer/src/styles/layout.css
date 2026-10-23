@@ -919,3 +919,50 @@
   border-color: var(--accent);
   transform: translateX(-50%) translateY(-1px);
 }
+
+/* ---------- 侧边栏与主区同底，只留一条分隔线 ---------- */
+
+.sidebar {
+  background: var(--bg);
+}
+
+/* ---------- 品牌 ---------- */
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 8px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  color: var(--text);
+}
+
+.sidebar__brand-name {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.sidebar__motto {
+  margin: 13px 0 0;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 1.95;
+  letter-spacing: 0.09em;
+  color: var(--text-3);
+}
+
+/* ---------- 状态文字：成功绿，其余灰 ---------- */
+
+.status-text {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.status-text--ok {
+  color: var(--success);
+}
