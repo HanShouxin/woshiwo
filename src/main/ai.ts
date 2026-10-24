@@ -24,7 +24,8 @@ function keyPathFor(configId: string): string {
   return join(keysDir(), `${safeId || 'default'}.bin`)
 }
 
-function saveKey(configId: string, key: string): boolean {
+/** 加密保存密钥：优先用异步 API（同步版 isEncryptionAvailable / encryptString 已弃用） */
+async function saveKey(configId: string, key: string): Promise<boolean> {
   try {
     mkdirSync(keysDir(), { recursive: true })
     const path = keyPathFor(configId)
@@ -32,10 +33,9 @@ function saveKey(configId: string, key: string): boolean {
       writeFileSync(path, Buffer.alloc(0))
       return true
     }
-    writeFileSync(
-      path,
-      safeStorage.isEncryptionAvailable() ? safeStorage.encryptString(key) : Buffer.from(key, 'utf8')
-    )
+    const available = await safeStorage.isAsyncEncryptionAvailable()
+    const data = available ? await safeStorage.encryptStringAsync(key) : Buffer.from(key, 'utf8')
+    writeFileSync(path, data)
     return true
   } catch (error) {
     console.error('[ai] 保存密钥失败', error)
@@ -43,17 +43,26 @@ function saveKey(configId: string, key: string): boolean {
   }
 }
 
-function loadKey(configId: string): string {
+async function loadKey(configId: string): Promise<string> {
   try {
     const path = keyPathFor(configId)
     if (!existsSync(path)) return ''
     const buffer = readFileSync(path)
     if (buffer.length === 0) return ''
-    if (safeStorage.isEncryptionAvailable()) {
+
+    if (await safeStorage.isAsyncEncryptionAvailable()) {
       try {
-        return safeStorage.decryptString(buffer)
+        const decoded = (await safeStorage.decryptStringAsync(buffer)) as unknown
+        if (typeof decoded === 'string') return decoded
+        if (Buffer.isBuffer(decoded)) return decoded.toString('utf8')
+        return String(decoded)
       } catch {
-        return buffer.toString('utf8')
+        // 兼容早期用同步 API 加密的数据
+        try {
+          return safeStorage.decryptString(buffer)
+        } catch {
+          return buffer.toString('utf8')
+        }
       }
     }
     return buffer.toString('utf8')
@@ -176,7 +185,7 @@ async function streamCompletion(
 export function registerAiIpc(): void {
   ipcMain.handle('key:set', (_event, configId: string, key: string) => saveKey(configId, key))
 
-  ipcMain.handle('key:has', (_event, configId: string) => loadKey(configId).length > 0)
+  ipcMain.handle('key:has', async (_event, configId: string) => (await loadKey(configId)).length > 0)
 
   // 回读已保存的 Key：供设置页回填输入框，点眼睛可查看 / 复制。
   // 只进渲染进程内存，绝不进数据库与备份。
@@ -186,7 +195,7 @@ export function registerAiIpc(): void {
 
   ipcMain.handle(
     'ai:chat',
-    (
+    async (
       event,
       payload: {
         requestId: string
@@ -197,7 +206,8 @@ export function registerAiIpc(): void {
       }
     ) => {
       // 测试连接传 tempKey（临时用，不落盘）；正式对话按 configId 取已保存的 Key
-      const apiKey = payload.tempKey?.trim() || (payload.configId ? loadKey(payload.configId) : '')
+      const storedKey = payload.configId ? await loadKey(payload.configId) : ''
+      const apiKey = payload.tempKey?.trim() || storedKey
       return streamCompletion(event.sender, payload.requestId, payload.config, payload.messages, apiKey)
     }
   )
@@ -208,7 +218,7 @@ export function registerAiIpc(): void {
   })
 
   ipcMain.handle('ai:models', async (_event, payload: { config: AIConfig; configId?: string }) => {
-    const apiKey = payload.configId ? loadKey(payload.configId) : ''
+    const apiKey = payload.configId ? await loadKey(payload.configId) : ''
     try {
       const response = await fetch(modelsUrl(payload.config), {
         headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {}
