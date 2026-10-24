@@ -1389,3 +1389,60 @@
   align-items: center;
   gap: 8px;
 }
+
+/* ---------- 现状卡片：大卡网格 + 编辑时左侧蓝线 ---------- */
+
+.card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.info-card {
+  position: relative;
+  min-height: 170px;
+  padding: 18px 20px 16px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.info-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.info-card:focus-within::before {
+  opacity: 1;
+}
+
+.info-card:focus-within {
+  border-color: var(--accent);
+}
+
+.info-card__body {
+  flex: 1;
+  margin-top: 12px;
+}
+
+.info-card__body .editable {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.info-card__category {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+.info-card--add::before {
+  display: none;
+}
