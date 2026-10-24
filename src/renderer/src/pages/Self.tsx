@@ -1,11 +1,17 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Plus, X } from 'lucide-react'
+import { Plus, GripVertical, X } from 'lucide-react'
 import Page from '../components/Page'
 import EditableText from '../components/EditableText'
 import Modal from '../components/Modal'
 import { formatDate } from '../lib/format'
-import { addViewpoint, deleteViewpoint, listViewpoints, updateViewpoint } from '../db/repo'
+import {
+  addViewpoint,
+  deleteViewpoint,
+  listViewpoints,
+  reorderViewpoints,
+  updateViewpoint
+} from '../db/repo'
 import { CORE_THOUGHT } from '../../../shared/constants'
 
 export default function Self(): React.JSX.Element {
@@ -13,6 +19,25 @@ export default function Self(): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [source, setSource] = useState('')
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
+
+  async function handleDrop(targetId: string): Promise<void> {
+    const fromId = draggingId
+    setDraggingId(null)
+    setOverId(null)
+    if (!fromId || fromId === targetId) return
+
+    const ids = viewpoints.map((item) => item.id)
+    const from = ids.indexOf(fromId)
+    const to = ids.indexOf(targetId)
+    if (from < 0 || to < 0) return
+
+    const next = [...ids]
+    next.splice(from, 1)
+    next.splice(to, 0, fromId)
+    await reorderViewpoints(next)
+  }
 
   function closeModal(): void {
     setOpen(false)
@@ -50,7 +75,40 @@ export default function Self(): React.JSX.Element {
       ) : (
         <section className="feed">
           {viewpoints.map((item) => (
-            <article className="feed-item" key={item.id}>
+            <article
+              className={`feed-item${draggingId === item.id ? ' feed-item--dragging' : ''}${
+                overId === item.id && draggingId !== item.id ? ' feed-item--over' : ''
+              }`}
+              key={item.id}
+              onDragOver={(event) => {
+                if (!draggingId) return
+                event.preventDefault()
+                setOverId(item.id)
+              }}
+              onDragLeave={() => setOverId((prev) => (prev === item.id ? null : prev))}
+              onDrop={(event) => {
+                event.preventDefault()
+                void handleDrop(item.id)
+              }}
+            >
+              <button
+                type="button"
+                className="feed-item__grip"
+                draggable
+                title="拖动调整顺序"
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'move'
+                  event.dataTransfer.setData('text/plain', item.id)
+                  setDraggingId(item.id)
+                }}
+                onDragEnd={() => {
+                  setDraggingId(null)
+                  setOverId(null)
+                }}
+              >
+                <GripVertical size={13} strokeWidth={2} />
+              </button>
+
               <button
                 type="button"
                 className="feed-item__delete"

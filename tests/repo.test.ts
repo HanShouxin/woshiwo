@@ -13,6 +13,7 @@ import {
   listActionsByType,
   listProfileCards,
   listViewpoints,
+  reorderViewpoints,
   resolveContradiction,
   setCurrentContradiction
 } from '../src/renderer/src/db/repo'
@@ -105,6 +106,22 @@ describe('现状与感悟', () => {
     await addViewpoint('第二条')
     const list = await listViewpoints()
     expect(list[0].content).toBe('第二条')
+  })
+
+  it('拖拽重排后按新顺序返回', async () => {
+    await addViewpoint('A')
+    await addViewpoint('B')
+    await addViewpoint('C')
+
+    const before = await listViewpoints()
+    expect(before.map((item) => item.content)).toEqual(['C', 'B', 'A'])
+
+    // 把最早的 A 拖到最上方
+    const ids = before.map((item) => item.id)
+    await reorderViewpoints([ids[2], ids[0], ids[1]])
+
+    const after = await listViewpoints()
+    expect(after.map((item) => item.content)).toEqual(['A', 'C', 'B'])
   })
 })
 

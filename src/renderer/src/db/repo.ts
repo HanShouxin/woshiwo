@@ -248,6 +248,19 @@ export async function updateViewpoint(id: string, patch: Partial<Viewpoint>): Pr
 
 export const deleteViewpoint = (id: string): Promise<void> => db.viewpoints.delete(id)
 
+/**
+ * 按给定显示顺序（从上到下）重排感悟。
+ * order 越大越靠上，所以第一个给最大 order。
+ */
+export async function reorderViewpoints(orderedIds: string[]): Promise<void> {
+  const total = orderedIds.length
+  await db.transaction('rw', db.viewpoints, async () => {
+    for (let index = 0; index < total; index += 1) {
+      await db.viewpoints.update(orderedIds[index], { order: total - index, updatedAt: now() })
+    }
+  })
+}
+
 /* ---------------- 复盘（独立库） ---------------- */
 
 export const listReflections = (): Promise<Reflection[]> =>
