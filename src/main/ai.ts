@@ -43,6 +43,32 @@ async function saveKey(configId: string, key: string): Promise<boolean> {
   }
 }
 
+/**
+ * 解密密钥缓冲区。
+ * 注意 decryptStringAsync 返回的是 { shouldReEncrypt, result } 对象，
+ * 不是字符串——早期误用 String() 会产生 "[object Object]" 脏值。
+ */
+async function decryptKeyBuffer(
+  buffer: Buffer
+): Promise<{ result: string; shouldReEncrypt: boolean } | null> {
+  if (await safeStorage.isAsyncEncryptionAvailable()) {
+    try {
+      const value = await safeStorage.decryptStringAsync(buffer)
+      if (value && typeof value.result === 'string') {
+        return { result: value.result, shouldReEncrypt: Boolean(value.shouldReEncrypt) }
+      }
+    } catch {
+      // 早期用同步 API 加密的数据，下面回退
+    }
+    try {
+      return { result: safeStorage.decryptString(buffer), shouldReEncrypt: false }
+    } catch {
+      // 最终按明文兜底
+    }
+  }
+  return { result: buffer.toString('utf8'), shouldReEncrypt: false }
+}
+
 async function loadKey(configId: string): Promise<string> {
   try {
     const path = keyPathFor(configId)
@@ -50,22 +76,20 @@ async function loadKey(configId: string): Promise<string> {
     const buffer = readFileSync(path)
     if (buffer.length === 0) return ''
 
-    if (await safeStorage.isAsyncEncryptionAvailable()) {
-      try {
-        const decoded = (await safeStorage.decryptStringAsync(buffer)) as unknown
-        if (typeof decoded === 'string') return decoded
-        if (Buffer.isBuffer(decoded)) return decoded.toString('utf8')
-        return String(decoded)
-      } catch {
-        // 兼容早期用同步 API 加密的数据
-        try {
-          return safeStorage.decryptString(buffer)
-        } catch {
-          return buffer.toString('utf8')
-        }
-      }
+    const decoded = await decryptKeyBuffer(buffer)
+    if (!decoded) return ''
+
+    const key = decoded.result
+    // 防御：丢弃历史脏值，避免带着坏 Key 去请求（表现为 401）
+    if (!key || key.startsWith('[object ')) {
+      console.warn(`[ai] 密钥不可用（${key ? '内容已损坏' : '空'}），请重新填写`)
+      return ''
     }
-    return buffer.toString('utf8')
+    // 系统提示密钥需要轮换时，用新密钥重写一次
+    if (decoded.shouldReEncrypt) {
+      await saveKey(configId, key)
+    }
+    return key
   } catch {
     return ''
   }
