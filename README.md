@@ -1,5 +1,8 @@
 # 我是我 · V2.0
 
+[![Release](https://img.shields.io/github/v/release/HanShouxin/woshiwo?label=%E4%B8%8B%E8%BD%BD)](https://github.com/HanShouxin/woshiwo/releases/latest)
+[![License](https://img.shields.io/github/license/HanShouxin/woshiwo)](https://github.com/HanShouxin/woshiwo/blob/main/LICENSE)
+
 > 钱塘江上潮信来，今日方知我是我。
 
 一个**本地优先**的个人成长桌面应用。它不做打卡、不做励志、不给你打分，只做一件事：
@@ -9,6 +12,58 @@
 核心闭环：了解现状 → 分析主要矛盾 → 确认目标 → 制定行动 → 记录进展 → 调整下一步。
 
 方法论来自毛泽东《矛盾论》：一个复杂过程里同时存在两个以上矛盾时，全力找出它的主要矛盾；捉住了这个主要矛盾，一切问题就迎刃而解。
+
+---
+
+## 下载与使用
+
+**不需要安装 Node.js，也不需要懂代码。** 这是一个免安装的绿色软件。
+
+### 四步开始
+
+1. **下载**：打开 [Releases](https://github.com/HanShouxin/woshiwo/releases/latest)，在 Assets 里下载 `我是我-v2.0-win-x64.zip`（约 156 MB）
+2. **解压**：解压到任意目录。建议放在 `D:\Apps\` 这类普通文件夹，不要放 `C:\Program Files`（那里需要管理员权限写数据）
+3. **运行**：进入解压出的 `win-unpacked` 文件夹，双击 **`woshiwo.exe`**
+4. **配置模型**：点左下角「设置」→ 填配置名称、模型名、接口地址、API-KEY → **先点「测试连接」**，显示绿色「连接成功」后再保存
+
+配置好后回到首页，先在「现状」里记几条你现在的情况，然后开始对话。
+
+### 支持的模型
+
+| 类型 | 接口地址示例 | 说明 |
+|---|---|---|
+| OpenAI 兼容 | `https://api.deepseek.com/v1` | DeepSeek、阿里百炼、通义、硅基流动等都兼容 |
+| 本地 Ollama | `http://localhost:11434/v1` | 需要本机已运行 Ollama，完全离线，不需要 Key |
+
+模型名必须填服务商文档里给出的准确名称（例如 `deepseek-chat`）。可以保存多套配置（如「百炼」「公司 Ollama」），从「已保存配置」里随时切换。
+
+### 数据在哪里
+
+| 操作 | 怎么做 |
+|---|---|
+| 数据存放 | 解压目录下的 `win-unpacked\data\` 文件夹 |
+| 换电脑 | 把整个 `win-unpacked` 文件夹拷过去，数据一起带走 |
+| 备份 | 设置 → 数据与备份 → 导出备份（JSON，不含 API-KEY） |
+| 彻底删除 | 先导出备份（如果需要），再删掉整个文件夹 |
+
+所有数据只在本机，不上传任何服务器。API-KEY 用系统级加密单独存放，不进数据库、不进备份。
+
+### 系统要求
+
+- Windows 10 / 11，64 位
+- 解压后约 397 MB 磁盘空间
+- 使用在线模型需要联网；用 Ollama 可完全离线
+
+### 常见问题
+
+**双击没反应 / 被 Windows 拦截**
+这是没有代码签名证书的软件的通病。Windows SmartScreen 会提示「Windows 已保护你的电脑」，点「更多信息」→「仍要运行」即可。
+
+**提示连接失败**
+先确认接口地址末尾带 `/v1`（大多数服务商需要），再确认模型名拼写正确。Ollama 用户请确认本地服务已启动，可以直接在浏览器打开 `http://localhost:11434` 看看有没有输出。
+
+**换电脑后打开是空的**
+数据在 `data` 文件夹里，只拷 exe 不拷 `data` 就会是空库。要么整个文件夹一起拷，要么用「导出备份 / 导入备份」。
 
 ---
 
