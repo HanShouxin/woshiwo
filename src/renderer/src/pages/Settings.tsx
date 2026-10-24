@@ -8,10 +8,9 @@ import { getOverview, getSetting, setSetting } from '../db/repo'
 import {
   backupFileName,
   buildBackup,
+  buildReflectionFiles,
   clearAllData,
-  exportReflectionsMarkdown,
   exportViewpointsMarkdown,
-  reflectionsFileName,
   restoreBackup,
   serializeBackup,
   viewpointsFileName
@@ -347,13 +346,19 @@ export default function Settings(): React.JSX.Element {
   }
 
   async function exportReflections(): Promise<void> {
-    const content = await exportReflectionsMarkdown()
-    const result = await window.woshiwo.file.saveText({
-      content,
-      defaultName: reflectionsFileName(),
-      extension: 'md'
-    })
-    setBackupStatus(result.ok ? `已导出到 ${result.path}` : '已取消')
+    const bundle = await buildReflectionFiles()
+    if (bundle.files.length === 0) {
+      setBackupStatus('还没有复盘可以导出')
+      return
+    }
+    const result = await window.woshiwo.file.saveFolder(bundle)
+    if (!result.ok) {
+      setBackupStatus('已取消')
+      return
+    }
+    const extra =
+      bundle.untitled > 0 ? `（其中 ${bundle.untitled} 篇没写标题，已用记录日期命名）` : ''
+    setBackupStatus(`已导出 ${result.count} 篇到 ${result.path}${extra}`)
   }
 
   async function clearEverything(): Promise<void> {
@@ -606,7 +611,7 @@ export default function Settings(): React.JSX.Element {
             导出感悟 .md
           </button>
           <button type="button" className="btn" onClick={() => void exportReflections()}>
-            导出复盘 .md
+            导出复盘（文件夹）
           </button>
           <button
             type="button"

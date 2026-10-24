@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, join, basename } from 'node:path'
 import { registerAiIpc } from './ai'
 
 // 文本类桌面工具不需要 GPU 合成：省电，并避免驱动/远程桌面/受限环境下的 GPU 进程崩溃。
@@ -146,6 +146,33 @@ if (!gotLock) {
         return { ok: false, error: String(error) }
       }
     })
+
+    // 导出成文件夹：选目录 → 建子文件夹 → 批量写文件（复盘每篇一个 txt）
+    ipcMain.handle(
+      'file:saveFolder',
+      async (
+        event,
+        payload: { folderName: string; files: Array<{ name: string; content: string }> }
+      ) => {
+        const win = BrowserWindow.fromWebContents(event.sender) ?? undefined
+        const result = await dialog.showOpenDialog(win!, {
+          title: '选择导出位置',
+          properties: ['openDirectory', 'createDirectory']
+        })
+        if (result.canceled || result.filePaths.length === 0) return { ok: false }
+        try {
+          const targetDir = join(result.filePaths[0], payload.folderName)
+          mkdirSync(targetDir, { recursive: true })
+          for (const file of payload.files) {
+            // basename 兜底，防止文件名带路径穿越
+            writeFileSync(join(targetDir, basename(file.name)), file.content, 'utf8')
+          }
+          return { ok: true, path: targetDir, count: payload.files.length }
+        } catch (error) {
+          return { ok: false, error: String(error) }
+        }
+      }
+    )
 
     createWindow()
 

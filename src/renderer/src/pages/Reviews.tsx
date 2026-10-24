@@ -79,10 +79,10 @@ export default function Reviews(): React.JSX.Element {
                 type="button"
                 className={`reviews__item${
                   active?.id === item.id ? ' reviews__item--active' : ''
-                }`}
+                }${item.title.trim() ? '' : ' reviews__item--untitled'}`}
                 onClick={() => setSelectedId(item.id)}
               >
-                {item.title.trim() || item.content.trim().slice(0, 18) || '无标题'}
+                {item.title.trim() || '未命名 · 补个标题'}
               </button>
             ))}
             <button type="button" className="reviews__item" onClick={() => void create()}>
@@ -93,10 +93,13 @@ export default function Reviews(): React.JSX.Element {
           <div className="reviews__editor">
             <input
               className="reviews__title"
-              placeholder="标题（可留空）"
+              placeholder="标题（必填）"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
             />
+            {!title.trim() ? (
+              <p className="reviews__warn">标题必填——导出复盘时，它就是这一篇的文件名</p>
+            ) : null}
             <textarea
               className="reviews__content"
               placeholder="想写什么都可以。"

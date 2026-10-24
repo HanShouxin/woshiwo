@@ -984,3 +984,15 @@
 .sidebar {
   padding-top: 8px;
 }
+
+/* 复盘标题必填提示 */
+.reviews__warn {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.reviews__item--untitled {
+  font-style: italic;
+  color: var(--text-3);
+}

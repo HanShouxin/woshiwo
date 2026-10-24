@@ -45,6 +45,16 @@ const api = {
         content?: string
         path?: string
         error?: string
+      }>,
+    saveFolder: (payload: {
+      folderName: string
+      files: Array<{ name: string; content: string }>
+    }) =>
+      ipcRenderer.invoke('file:saveFolder', payload) as Promise<{
+        ok: boolean
+        path?: string
+        count?: number
+        error?: string
       }>
   },
   ai: {

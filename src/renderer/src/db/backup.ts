@@ -89,6 +89,12 @@ function dateLabel(iso: string): string {
   ).padStart(2, '0')}`
 }
 
+function timeLabel(iso: string): string {
+  const date = new Date(iso)
+  const pad = (value: number): string => String(value).padStart(2, '0')
+  return `${dateLabel(iso)} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 export function backupFileName(): string {
   return `我是我-备份-${stamp()}.json`
 }
@@ -97,11 +103,72 @@ export function viewpointsFileName(): string {
   return `我是我-感悟-${stamp()}.md`
 }
 
-export function reflectionsFileName(): string {
-  return `我是我-复盘-${stamp()}.md`
+/** 复盘导出：一个文件夹，每篇独立 txt */
+export const REFLECTIONS_FOLDER = '我是我-复盘笔记'
+
+export interface ExportFile {
+  name: string
+  content: string
 }
 
-/** 感悟导出：核心思想置顶 + 全部感悟（新的在上） */
+export interface ReflectionsBundle {
+  folderName: string
+  files: ExportFile[]
+  /** 没有填标题的篇数（导出时用记录日期兜底命名） */
+  untitled: number
+}
+
+/** Windows 文件名不允许的字符一律换成空格，去掉结尾的点与空格 */
+function sanitizeFileName(raw: string): string {
+  return raw
+    .replace(/[\\/:*?"<>|]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.\s]+$/g, '')
+    .slice(0, 80)
+}
+
+/**
+ * 生成复盘导出包。
+ * 文件名 = 用户填的标题；同名时按系统习惯追加 (2)(3)；没标题的用记录日期兜底。
+ * 文件内容 = 标题 / 时间 / 空行 / 正文。
+ */
+export async function buildReflectionFiles(): Promise<ReflectionsBundle> {
+  const items = await reflectionsDb.reflections.orderBy('updatedAt').reverse().toArray()
+  const used = new Set<string>()
+  const files: ExportFile[] = []
+  let untitled = 0
+
+  for (const item of items) {
+    const rawTitle = item.title.trim()
+    if (!rawTitle) untitled += 1
+
+    const fallback = `未命名-${dateLabel(item.createdAt).replace(/\./g, '')}`
+    const base = sanitizeFileName(rawTitle) || fallback
+
+    // 文件名去重（Windows 不区分大小写，统一用小写比较）
+    let name = base
+    let index = 2
+    while (used.has(name.toLowerCase())) {
+      name = `${base} (${index})`
+      index += 1
+    }
+    used.add(name.toLowerCase())
+
+    const content = [
+      rawTitle || '（未命名）',
+      `时间：${timeLabel(item.createdAt)}`,
+      '',
+      item.content.trim()
+    ].join('\n')
+
+    files.push({ name: `${name}.txt`, content })
+  }
+
+  return { folderName: REFLECTIONS_FOLDER, files, untitled }
+}
+
+/** 感悟导出：核心思想置顶 + 全部感悟（新的在上），每条只列 正文 / 来源 / 时间 */
 export async function exportViewpointsMarkdown(): Promise<string> {
   const items = await db.viewpoints.orderBy('order').reverse().toArray()
   const lines: string[] = [
@@ -115,33 +182,13 @@ export async function exportViewpointsMarkdown(): Promise<string> {
     ''
   ]
 
-  items.forEach((item, index) => {
-    lines.push('---', '', `## ${items.length - index}`, '', item.content, '')
+  items.forEach((item) => {
+    lines.push('---', '', item.content, '')
     if (item.source) lines.push(`来源：${item.source}`, '')
     lines.push(`记录于 ${dateLabel(item.createdAt)}`, '')
   })
 
   if (items.length === 0) lines.push('（还没有感悟）', '')
-  return lines.join('\n')
-}
-
-/** 复盘导出：纯私人笔记，按时间倒序 */
-export async function exportReflectionsMarkdown(): Promise<string> {
-  const items = await reflectionsDb.reflections.orderBy('updatedAt').reverse().toArray()
-  const lines: string[] = [
-    '# 复盘 · 私人笔记',
-    '',
-    `导出时间：${new Date().toLocaleString('zh-CN')}`,
-    ''
-  ]
-
-  items.forEach((item) => {
-    lines.push('---', '', `## ${item.title.trim() || dateLabel(item.createdAt)}`, '')
-    lines.push(`时间：${dateLabel(item.createdAt)}`, '')
-    if (item.content.trim()) lines.push(item.content, '')
-  })
-
-  if (items.length === 0) lines.push('（还没有复盘）', '')
   return lines.join('\n')
 }
 

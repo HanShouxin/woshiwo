@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { db, reflectionsDb } from '../src/renderer/src/db/db'
 import {
   buildBackup,
+  buildReflectionFiles,
   clearAllData,
-  exportReflectionsMarkdown,
   exportViewpointsMarkdown,
   restoreBackup,
   serializeBackup
@@ -82,20 +82,54 @@ describe('备份导出与导入', () => {
 })
 
 describe('Markdown 导出', () => {
-  it('感悟导出含核心思想与来源', async () => {
+  it('感悟导出只列正文、来源、时间，不用序号当标题', async () => {
     await seed()
     const md = await exportViewpointsMarkdown()
     expect(md).toContain('# 我是我 · 感悟')
     expect(md).toContain('矛盾论')
     expect(md).toContain('先动手比想清楚重要')
     expect(md).toContain('来源：《矛盾论》')
+    expect(md).toContain('记录于')
+    expect(md).not.toMatch(/^## \d+$/m)
+  })
+})
+
+describe('复盘导出（文件夹 + 每篇 txt）', () => {
+  it('文件夹名固定，每篇一个 txt，标题作文件名，同名自动加序号', async () => {
+    const first = await createReflection()
+    await updateReflection(first, { title: '这周', content: '状态不错' })
+    const second = await createReflection()
+    await updateReflection(second, { title: '这周', content: '第二篇' })
+
+    const bundle = await buildReflectionFiles()
+    expect(bundle.folderName).toBe('我是我-复盘笔记')
+    expect(bundle.files).toHaveLength(2)
+
+    const names = bundle.files.map((file) => file.name).sort()
+    expect(names).toEqual(['这周 (2).txt', '这周.txt'])
+
+    // 同名两篇都拿到独立文件，内容各自对应
+    const withFirst = bundle.files.find((file) => file.content.includes('状态不错'))
+    expect(withFirst).toBeDefined()
+    const lines = (withFirst?.content ?? '').split('\n')
+    expect(lines[0]).toBe('这周')
+    expect(lines[1]).toContain('时间：')
+    expect(lines[2]).toBe('')
   })
 
-  it('复盘导出含标题与时间', async () => {
-    await seed()
-    const md = await exportReflectionsMarkdown()
-    expect(md).toContain('# 复盘 · 私人笔记')
-    expect(md).toContain('这周')
-    expect(md).toContain('状态不错')
+  it('没写标题的用记录日期兜底命名，并计入 untitled', async () => {
+    await createReflection()
+    const bundle = await buildReflectionFiles()
+    expect(bundle.untitled).toBe(1)
+    expect(bundle.files[0].name).toMatch(/^未命名-\d{8}\.txt$/)
+    expect(bundle.files[0].content.startsWith('（未命名）')).toBe(true)
+  })
+
+  it('标题里的非法文件名字符会被清理', async () => {
+    const id = await createReflection()
+    await updateReflection(id, { title: 'a/b:c*d?e', content: 'x' })
+    const bundle = await buildReflectionFiles()
+    expect(bundle.files[0].name).not.toMatch(/[\\/:*?"<>|]/)
+    expect(bundle.files[0].name.endsWith('.txt')).toBe(true)
   })
 })
