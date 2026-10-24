@@ -2062,3 +2062,34 @@
   text-align: right;
   padding-right: 1px;
 }
+
+/* ---------- 品牌收尾：名字去底色加粗，题签加分割线 ---------- */
+
+.sidebar__brand-name {
+  height: auto;
+  padding: 0;
+  background: none;
+  color: var(--text);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.sidebar__brand:hover .sidebar__brand-name {
+  background: none;
+  color: var(--accent);
+}
+
+.sidebar__motto {
+  margin: 10px 0 0;
+  padding: 0 2px 13px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11.5px;
+  line-height: 1.8;
+  letter-spacing: 0.04em;
+}
+
+/* 分割线之后，导航不要离太远 */
+.sidebar__motto + .nav {
+  margin-top: 12px;
+}
