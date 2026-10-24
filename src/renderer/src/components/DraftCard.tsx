@@ -140,10 +140,10 @@ export default function DraftCard({
         <p className="draft-card__hint">示例对话里的草案不能直接采纳，你需要开始自己的对话。</p>
       ) : done ? (
         <p className="draft-card__hint">
-          已写入行动页：
-          {confirmedSteps > 0 ? `${confirmedSteps} 个步骤（左侧「当前步骤」）` : ''}
-          {confirmedSteps > 0 && confirmedHabits > 0 ? ' · ' : ''}
-          {confirmedHabits > 0 ? `${confirmedHabits} 个习惯（右侧「长期习惯」）` : ''}
+          已写入行动页左边「当前步骤」：{confirmedSteps} 条。
+          {confirmedHabits > 0
+            ? '右边的长期习惯是留给你自己写的，草案里的习惯只作参考，需要就自己去加。'
+            : ''}
         </p>
       ) : (
         <div className="draft-card__actions">

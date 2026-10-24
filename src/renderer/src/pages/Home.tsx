@@ -301,9 +301,14 @@ export default function Home(): React.JSX.Element {
       text: payload.contradiction,
       goalTitleSnapshot: payload.goal
     })
+
+    // 只写入「步骤」。长期习惯是用户自己的领地——草案里的习惯只作建议展示，
+    // 由用户自己在行动页手动添加，AI 不代笔。
     for (const action of payload.actions) {
-      await addAction(action.type, action.text, action.type === 'step' ? id : undefined)
+      if (action.type !== 'step') continue
+      await addAction('step', action.text, id)
     }
+
     await updateMessage(messageId, { draftState: 'confirmed' })
   }
 
