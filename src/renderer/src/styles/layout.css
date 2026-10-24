@@ -1995,3 +1995,70 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------- 品牌：图标一个框、名字一个框 + 双行题签 ---------- */
+
+.sidebar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: none;
+  color: inherit;
+}
+
+.sidebar__brand:hover {
+  background: none;
+}
+
+/* 图标：蓝底白图案小方块 */
+.sidebar__brand .brand-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  transition: background-color 140ms ease;
+}
+
+.sidebar__brand:hover .brand-mark {
+  background: var(--accent-hover);
+}
+
+/* 名字：独立的浅色标签框 */
+.sidebar__brand-name {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  transition: background-color 140ms ease;
+}
+
+.sidebar__brand:hover .sidebar__brand-name {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* 题签：第一行左起，第二行右收 */
+.sidebar__motto {
+  margin: 12px 0 0;
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1.85;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.sidebar__motto-second {
+  display: block;
+  text-align: right;
+  padding-right: 1px;
+}

@@ -60,7 +60,10 @@ export default function Sidebar(): React.JSX.Element {
         <span className="sidebar__brand-name">我是我</span>
       </Link>
 
-      <p className="sidebar__motto">钱塘江上潮信来，今日方知我是我。</p>
+      <p className="sidebar__motto">
+        钱塘江上潮信来，
+        <span className="sidebar__motto-second">今日方知我是我。</span>
+      </p>
 
       <nav className="nav">
         {NAV_ITEMS.map((item) => {
