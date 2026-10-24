@@ -1045,3 +1045,166 @@
   color: var(--text-3);
   font-size: 10px;
 }
+
+/* ---------- 弹窗 ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 20, 22, 0.32);
+}
+
+.modal {
+  width: min(520px, calc(100vw - 48px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+}
+
+.modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 8px;
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.modal__close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: var(--text-3);
+}
+
+.modal__close:hover {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+.modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 18px 4px;
+}
+
+.modal__textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  outline: none;
+  resize: vertical;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.modal__textarea:focus {
+  border-color: var(--accent);
+}
+
+.modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 18px 16px;
+}
+
+/* ---------- 感悟卡：与核心思想同一套视觉 ---------- */
+
+.self-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 14px 0 18px;
+}
+
+.viewpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 0;
+}
+
+.viewpoint-card {
+  position: relative;
+  margin: 0;
+}
+
+.viewpoint-card__text {
+  font-size: 16px;
+  line-height: 1.85;
+  letter-spacing: 0.01em;
+}
+
+.viewpoint-card__text:hover {
+  border-color: transparent;
+}
+
+.viewpoint-card__text:focus {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
+.viewpoint-card__source {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.source-inline {
+  width: auto;
+  min-width: 140px;
+  max-width: 70%;
+  padding: 2px 4px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.source-inline:hover {
+  border-color: transparent;
+  color: var(--text-2);
+}
+
+.source-inline:focus {
+  text-align: left;
+  color: var(--text);
+}
+
+.viewpoint-card__delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--text-3);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.viewpoint-card:hover .viewpoint-card__delete {
+  opacity: 1;
+}
+
+.viewpoint-card__delete:hover {
+  color: #d70015;
+  background: rgba(215, 0, 21, 0.08);
+}
