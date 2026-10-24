@@ -48,35 +48,33 @@ export default function Self(): React.JSX.Element {
           <span className="empty__hint">随手记一句就够，不用写得漂亮。</span>
         </div>
       ) : (
-        <section className="viewpoints">
+        <section className="feed">
           {viewpoints.map((item) => (
-            <article className="core-thought viewpoint-card" key={item.id}>
-              <button
-                type="button"
-                className="viewpoint-card__delete"
-                title="删除"
-                onClick={() => void deleteViewpoint(item.id)}
-              >
-                <X size={13} strokeWidth={2} />
-              </button>
-
-              <span className="core-thought__label">{formatDate(item.createdAt)}</span>
+            <article className="feed-item" key={item.id}>
+              <header className="feed-item__head">
+                <span className="feed-item__date">{formatDate(item.createdAt)}</span>
+                <EditableText
+                  value={item.source ?? ''}
+                  placeholder="＋ 来源（选填）"
+                  className="feed-item__source"
+                  onSave={(next) => void updateViewpoint(item.id, { source: next })}
+                />
+                <button
+                  type="button"
+                  className="feed-item__delete"
+                  title="删除"
+                  onClick={() => void deleteViewpoint(item.id)}
+                >
+                  <X size={13} strokeWidth={2} />
+                </button>
+              </header>
 
               <EditableText
                 multiline
                 value={item.content}
-                className="viewpoint-card__text"
+                className="feed-item__text"
                 onSave={(next) => void updateViewpoint(item.id, { content: next })}
               />
-
-              <div className="viewpoint-card__source">
-                <EditableText
-                  value={item.source ?? ''}
-                  placeholder="＋ 添加来源（选填）"
-                  className="source-inline"
-                  onSave={(next) => void updateViewpoint(item.id, { source: next })}
-                />
-              </div>
             </article>
           ))}
         </section>

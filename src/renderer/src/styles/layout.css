@@ -1208,3 +1208,88 @@
   color: #d70015;
   background: rgba(215, 0, 21, 0.08);
 }
+
+/* ---------- 感悟流（豆瓣短评式紧凑列表） ---------- */
+
+.feed {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.feed-item {
+  position: relative;
+  padding: 13px 0 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.feed-item__head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+
+.feed-item__date {
+  font-size: 12px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.feed-item__source {
+  width: auto;
+  min-width: 70px;
+  padding: 0 3px;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.6;
+}
+
+.feed-item__source:hover {
+  border-color: transparent;
+  color: var(--text-2);
+}
+
+.feed-item__text {
+  padding: 0 3px;
+  font-size: 14px;
+  line-height: 1.75;
+  /* 高度跟随内容，单行就只有一行高 */
+  field-sizing: content;
+  min-height: 1.75em;
+}
+
+.feed-item__text:hover {
+  border-color: transparent;
+}
+
+.feed-item__text:focus {
+  border-color: var(--accent);
+  background: var(--bg);
+}
+
+.feed-item__delete {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--text-3);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.feed-item:hover .feed-item__delete {
+  opacity: 1;
+}
+
+.feed-item__delete:hover {
+  color: #d70015;
+  background: rgba(215, 0, 21, 0.08);
+}
