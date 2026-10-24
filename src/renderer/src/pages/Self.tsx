@@ -51,23 +51,14 @@ export default function Self(): React.JSX.Element {
         <section className="feed">
           {viewpoints.map((item) => (
             <article className="feed-item" key={item.id}>
-              <header className="feed-item__head">
-                <span className="feed-item__date">{formatDate(item.createdAt)}</span>
-                <EditableText
-                  value={item.source ?? ''}
-                  placeholder="＋ 来源（选填）"
-                  className="feed-item__source"
-                  onSave={(next) => void updateViewpoint(item.id, { source: next })}
-                />
-                <button
-                  type="button"
-                  className="feed-item__delete"
-                  title="删除"
-                  onClick={() => void deleteViewpoint(item.id)}
-                >
-                  <X size={13} strokeWidth={2} />
-                </button>
-              </header>
+              <button
+                type="button"
+                className="feed-item__delete"
+                title="删除"
+                onClick={() => void deleteViewpoint(item.id)}
+              >
+                <X size={13} strokeWidth={2} />
+              </button>
 
               <EditableText
                 multiline
@@ -75,6 +66,16 @@ export default function Self(): React.JSX.Element {
                 className="feed-item__text"
                 onSave={(next) => void updateViewpoint(item.id, { content: next })}
               />
+
+              <footer className="feed-item__foot">
+                <span className="feed-item__date">{formatDate(item.createdAt)}</span>
+                <EditableText
+                  value={item.source ?? ''}
+                  placeholder="＋ 来源（选填）"
+                  className="feed-item__source"
+                  onSave={(next) => void updateViewpoint(item.id, { source: next })}
+                />
+              </footer>
             </article>
           ))}
         </section>

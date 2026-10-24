@@ -1293,3 +1293,22 @@
   color: #d70015;
   background: rgba(215, 0, 21, 0.08);
 }
+
+/* 感悟条目：正文在上，底部左时间右来源 */
+
+.feed-item {
+  padding: 12px 0 10px;
+}
+
+.feed-item__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 1px;
+}
+
+.feed-item__source {
+  margin-left: auto;
+  text-align: right;
+}
