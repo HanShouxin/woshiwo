@@ -7,3 +7,6 @@ release/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+# 设计过程文档，不进仓库
+「我是我 V2.0」*.md
