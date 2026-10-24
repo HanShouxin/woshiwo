@@ -1623,3 +1623,60 @@
 .titlebar-drag {
   background: transparent;
 }
+
+/* ---------- 现状卡片：横向长条 ---------- */
+
+.card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 10px;
+}
+
+.info-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  padding: 11px 14px 11px 12px;
+}
+
+.info-card__mark {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.info-card:hover .info-card__mark {
+  opacity: 1;
+}
+
+.info-card__body {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.info-card__body .editable {
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  field-sizing: content;
+  min-height: 1.5em;
+}
+
+.info-card__category {
+  flex: 0 0 auto;
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.info-card--add {
+  justify-content: center;
+  gap: 6px;
+  min-height: 58px;
+  font-size: 12px;
+}
