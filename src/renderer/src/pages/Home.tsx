@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { ArrowDown, ArrowUp, Square } from 'lucide-react'
+import { ArrowDown, ArrowUp, Pencil, Square, Trash2 } from 'lucide-react'
 import { parseDraftBlocks } from '../ai/draft'
 import { ensureSampleSession } from '../ai/sampleSession'
 import { abortChat, startChat } from '../ai/client'
@@ -11,10 +11,13 @@ import DraftCard from '../components/DraftCard'
 import SourceRow from '../components/SourceRow'
 import {
   appendMessage,
+  countMemoriesOfSession,
   createSession,
+  deleteSession,
   listMessages,
   listSessions,
-  updateMessage
+  updateMessage,
+  updateSession
 } from '../db/chatRepo'
 import { addAction, getSetting, setCurrentContradiction } from '../db/repo'
 import { SETTINGS_PATH } from '../../../shared/constants'
@@ -55,6 +58,8 @@ export default function Home(): React.JSX.Element {
   const [input, setInput] = useState('')
   const [notice, setNotice] = useState('')
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
   const [liveText, setLiveText] = useState('')
   const [streamId, setStreamId] = useState<string | null>(null)
   const liveRef = useRef('')
@@ -129,6 +134,29 @@ export default function Home(): React.JSX.Element {
     setHistoryOpen(false)
   }
 
+  async function renameSession(id: string): Promise<void> {
+    const title = editingTitle.trim()
+    setEditingId(null)
+    setEditingTitle('')
+    if (title) await updateSession(id, { title })
+  }
+
+  async function removeSession(id: string): Promise<void> {
+    const memories = await countMemoriesOfSession(id)
+    const confirmed = window.confirm(
+      `删除这段对话？删掉后无法恢复。${
+        memories > 0 ? `\n其中提炼的 ${memories} 条长期记忆会保留。` : ''
+      }`
+    )
+    if (!confirmed) return
+
+    await deleteSession(id)
+    if (activeId === id) {
+      const next = sessions.find((item) => item.id !== id)
+      setActiveId(next?.id ?? null)
+    }
+  }
+
   async function send(): Promise<void> {
     const text = input.trim()
     if (!text || streamId) return
@@ -146,6 +174,13 @@ export default function Home(): React.JSX.Element {
     }))
 
     await appendMessage({ sessionId, role: 'user', content: text })
+
+    // 首条消息到达时，把默认标题换成消息开头，避免历史里全是「新对话」
+    const currentSession = sessions.find((item) => item.id === sessionId)
+    if (currentSession && currentSession.title === '新对话') {
+      await updateSession(sessionId, { title: text.slice(0, 18) })
+    }
+
     setInput('')
     setNotice('')
 
@@ -333,23 +368,61 @@ export default function Home(): React.JSX.Element {
               {historyOpen ? (
                 <div className="history-pop">
                   {sessions.map((session) => (
-                    <button
-                      key={session.id}
-                      type="button"
-                      className={`history-pop__item${
-                        session.id === activeId ? ' history-pop__item--active' : ''
-                      }`}
-                      onClick={() => {
-                        setActiveId(session.id)
-                        setHistoryOpen(false)
-                        setNotice('')
-                      }}
-                    >
-                      <span className="history-pop__title">{session.title}</span>
-                      {session.kind === 'sample' ? (
-                        <span className="history-pop__kind">示例</span>
-                      ) : null}
-                    </button>
+                    <div className="history-pop__row" key={session.id}>
+                      {editingId === session.id ? (
+                        <input
+                          className="history-pop__input"
+                          autoFocus
+                          value={editingTitle}
+                          onChange={(event) => setEditingTitle(event.target.value)}
+                          onBlur={() => void renameSession(session.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') void renameSession(session.id)
+                            if (event.key === 'Escape') {
+                              setEditingId(null)
+                              setEditingTitle('')
+                            }
+                          }}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={`history-pop__item${
+                            session.id === activeId ? ' history-pop__item--active' : ''
+                          }`}
+                          onClick={() => {
+                            setActiveId(session.id)
+                            setHistoryOpen(false)
+                            setNotice('')
+                          }}
+                        >
+                          <span className="history-pop__title">{session.title}</span>
+                          {session.kind === 'sample' ? (
+                            <span className="history-pop__kind">示例</span>
+                          ) : null}
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        className="history-pop__act"
+                        title="重命名"
+                        onClick={() => {
+                          setEditingId(session.id)
+                          setEditingTitle(session.title)
+                        }}
+                      >
+                        <Pencil size={11} strokeWidth={2} />
+                      </button>
+                      <button
+                        type="button"
+                        className="history-pop__act history-pop__act--danger"
+                        title="删除对话"
+                        onClick={() => void removeSession(session.id)}
+                      >
+                        <Trash2 size={11} strokeWidth={2} />
+                      </button>
+                    </div>
                   ))}
                 </div>
               ) : null}

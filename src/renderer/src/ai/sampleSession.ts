@@ -44,6 +44,17 @@ export function ensureSampleSession(): Promise<void> {
 }
 
 async function runOnce(): Promise<void> {
+  // 已有示例：清理历史遗留的重复（只保留最早一条），不再新建
+  const samples = await db.chatSessions.where('kind').equals('sample').toArray()
+  if (samples.length > 0) {
+    const sorted = [...samples].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    for (const extra of sorted.slice(1)) {
+      await db.chatMessages.where('sessionId').equals(extra.id).delete()
+      await db.chatSessions.delete(extra.id)
+    }
+    return
+  }
+
   const count = await db.chatSessions.count()
   if (count > 0) return
 

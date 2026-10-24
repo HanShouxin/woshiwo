@@ -1745,3 +1745,67 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 历史对话：行内改名与删除 */
+
+.history-pop__row {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  border-radius: 6px;
+}
+
+.history-pop__row:hover {
+  background: var(--bg-subtle);
+}
+
+.history-pop__row .history-pop__item {
+  flex: 1;
+  min-width: 0;
+  background: none;
+}
+
+.history-pop__row .history-pop__item:hover {
+  background: none;
+}
+
+.history-pop__act {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  color: var(--text-3);
+  opacity: 0;
+  transition:
+    opacity 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
+}
+
+.history-pop__row:hover .history-pop__act {
+  opacity: 1;
+}
+
+.history-pop__act:hover {
+  color: var(--accent);
+  background: var(--surface);
+}
+
+.history-pop__act--danger:hover {
+  color: #dc2626;
+}
+
+.history-pop__input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  margin: 2px 3px;
+  padding: 0 7px;
+  border: 1px solid var(--accent);
+  border-radius: 5px;
+  background: var(--surface);
+  outline: none;
+  font-size: 13px;
+}
