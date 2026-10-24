@@ -1446,3 +1446,40 @@
 .info-card--add::before {
   display: none;
 }
+
+/* ---------- 现状卡片：紧凑网格（内容驱动高度） ---------- */
+
+.card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 12px;
+}
+
+.info-card {
+  min-height: 104px;
+  padding: 13px 15px 12px;
+}
+
+.info-card__body {
+  margin-top: 8px;
+}
+
+.info-card__body .editable {
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.info-card__category {
+  padding: 2px 8px;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+}
+
+.info-card--add {
+  gap: 5px;
+  font-size: 12px;
+  min-height: 104px;
+}
+
+.info-card--add svg {
+  opacity: 0.7;
+}
