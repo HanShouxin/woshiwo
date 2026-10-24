@@ -29,21 +29,75 @@ const PROMPTS = [
   '我想回顾之前的计划，看看接下来该做什么。'
 ] as const
 
-function renderText(text: string): React.JSX.Element[] {
+/** 行内：只认 **加粗** */
+function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   return text
-    .split('\n')
-    .filter((line) => line.trim().length > 0)
-    .map((line, index) => (
-      <p className="msg__p" key={index}>
-        {line.split(/(\*\*[^*]+\*\*)/g).map((part, partIndex) =>
-          part.startsWith('**') && part.endsWith('**') ? (
-            <strong key={partIndex}>{part.slice(2, -2)}</strong>
-          ) : (
-            <span key={partIndex}>{part}</span>
-          )
-        )}
+    .split(/(\*\*[^*]+\*\*)/g)
+    .filter(Boolean)
+    .map((part, index) =>
+      part.startsWith('**') && part.endsWith('**') ? (
+        <strong key={`${keyPrefix}-${index}`}>{part.slice(2, -2)}</strong>
+      ) : (
+        <span key={`${keyPrefix}-${index}`}>{part}</span>
+      )
+    )
+}
+
+/**
+ * 把模型输出渲染成可读段落。
+ * 模型偶尔会吐 Markdown（## 标题、- 列表），这里做兜底渲染，
+ * 不让 ## 和 - 原样露在界面上。
+ */
+function renderText(text: string): React.JSX.Element[] {
+  const nodes: React.JSX.Element[] = []
+  let bullets: string[] = []
+
+  function flushBullets(): void {
+    if (bullets.length === 0) return
+    const index = nodes.length
+    nodes.push(
+      <ul className="msg__ul" key={`ul-${index}`}>
+        {bullets.map((item, itemIndex) => (
+          <li key={`li-${index}-${itemIndex}`}>{renderInline(item, `li-${index}-${itemIndex}`)}</li>
+        ))}
+      </ul>
+    )
+    bullets = []
+  }
+
+  text.split('\n').forEach((raw, index) => {
+    const line = raw.trimEnd()
+    if (!line.trim()) {
+      flushBullets()
+      return
+    }
+
+    const bullet = line.match(/^\s*[-*•]\s+(.*)$/)
+    if (bullet) {
+      bullets.push(bullet[1])
+      return
+    }
+    flushBullets()
+
+    const heading = line.match(/^\s*#{1,6}\s+(.*)$/)
+    if (heading) {
+      nodes.push(
+        <p className="msg__h" key={`h-${index}`}>
+          {renderInline(heading[1], `h-${index}`)}
+        </p>
+      )
+      return
+    }
+
+    nodes.push(
+      <p className="msg__p" key={`p-${index}`}>
+        {renderInline(line, `p-${index}`)}
       </p>
-    ))
+    )
+  })
+
+  flushBullets()
+  return nodes
 }
 
 export default function Home(): React.JSX.Element {

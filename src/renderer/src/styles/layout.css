@@ -1809,3 +1809,37 @@
   outline: none;
   font-size: 13px;
 }
+
+/* 消息正文：加粗小标题与列表 */
+
+.msg__h {
+  margin: 16px 0 8px;
+  font-size: 15.5px;
+  font-weight: 650;
+  letter-spacing: 0.005em;
+  color: var(--text);
+}
+
+.msg__h:first-child {
+  margin-top: 0;
+}
+
+.msg__ul {
+  margin: 0 0 10px;
+  padding-left: 18px;
+}
+
+.msg__ul li {
+  margin-bottom: 5px;
+  font-size: 15px;
+  line-height: 1.8;
+}
+
+.msg__ul li::marker {
+  color: var(--text-3);
+}
+
+.msg__body strong {
+  font-weight: 650;
+  color: var(--text);
+}
