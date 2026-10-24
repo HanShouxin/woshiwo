@@ -51,14 +51,13 @@ export async function buildContext(input: {
   }
 
   const activeGoals = goals.filter((goal) => goal.status === 'active')
+  const shortGoals = activeGoals.filter((goal) => goal.horizon === 'short').map((goal) => goal.title)
+  const longGoals = activeGoals.filter((goal) => goal.horizon === 'long').map((goal) => goal.title)
+  // 用「短期：A / 长期：B、C」这种分组格式喂给模型，它复述时才会是这个样子
   const goalLines = [
-    ...activeGoals
-      .filter((goal) => goal.horizon === 'short')
-      .map((goal, index) => `短期${index + 1}：${goal.title}`),
-    ...activeGoals
-      .filter((goal) => goal.horizon === 'long')
-      .map((goal, index) => `长期${index + 1}：${goal.title}`)
-  ]
+    shortGoals.length > 0 ? `短期：${shortGoals.join('、')}` : '',
+    longGoals.length > 0 ? `长期：${longGoals.join('、')}` : ''
+  ].filter(Boolean)
   const goalBlock = block('用户设立的目标（按优先级排序）', goalLines)
   if (goalBlock) {
     parts.push(goalBlock)
