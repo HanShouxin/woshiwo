@@ -151,6 +151,7 @@ export default function Actions(): React.JSX.Element {
                 <span className="contradiction__label">当前主要矛盾</span>
                 <div className="contradiction__text">
                   <EditableText
+                    multiline
                     value={current.text}
                     onSave={(next) => void updateContradiction(current.id, { text: next })}
                   />
@@ -208,12 +209,12 @@ export default function Actions(): React.JSX.Element {
 
               <section className="split__section">
                 <h2 className="group__title">
-                  当前步骤
+                  行动步骤
                   <span className="group__count">{steps.length}</span>
                 </h2>
                 {steps.map((step, index) => (
-                  <div className="row" key={step.id}>
-                    <span className="step-index">步骤 {index + 1}</span>
+                  <div className="step-item" key={step.id}>
+                    <span className="step-item__no">{index + 1}</span>
                     <button
                       type="button"
                       className={`check${step.status === 'done' ? ' check--done' : ''}`}
@@ -225,13 +226,14 @@ export default function Actions(): React.JSX.Element {
                       <Check size={11} strokeWidth={3} />
                     </button>
                     <EditableText
+                      multiline
                       value={step.text}
-                      className={step.status === 'done' ? 'text-done' : undefined}
+                      className={`step-item__text${step.status === 'done' ? ' text-done' : ''}`}
                       onSave={(next) => void updateAction(step.id, { text: next })}
                     />
                     <button
                       type="button"
-                      className="row__action row__action--danger"
+                      className="row__action row__action--danger step-item__delete"
                       title="删除"
                       onClick={() => void deleteAction(step.id)}
                     >
