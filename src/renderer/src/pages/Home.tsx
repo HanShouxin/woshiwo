@@ -8,6 +8,7 @@ import { abortChat, startChat } from '../ai/client'
 import { buildContext } from '../ai/context'
 import { getIntegrationStatus, subscribeIntegration } from '../ai/integrate'
 import DraftCard from '../components/DraftCard'
+import SourceRow from '../components/SourceRow'
 import {
   appendMessage,
   createSession,
@@ -153,7 +154,7 @@ export default function Home(): React.JSX.Element {
       return
     }
 
-    const turns = await buildContext({
+    const { turns, sources } = await buildContext({
       history: [...history, { role: 'user', content: text }]
     })
 
@@ -179,7 +180,7 @@ export default function Home(): React.JSX.Element {
     liveRef.current = ''
 
     if (result.ok) {
-      await appendMessage({ sessionId, role: 'assistant', content: result.text })
+      await appendMessage({ sessionId, role: 'assistant', content: result.text, sources })
     } else if (result.aborted) {
       if (partial.trim()) {
         await appendMessage({
@@ -263,7 +264,11 @@ export default function Home(): React.JSX.Element {
                           onConfirm={(payload) => void applyDraft(payload, message.id)}
                         />
                       ))}
-                      {isSample ? <p className="msg__source">参考：示例数据</p> : null}
+                      {message.sources && message.sources.length > 0 ? (
+                        <SourceRow sources={message.sources} />
+                      ) : isSample ? (
+                        <p className="msg__source">参考：示例数据</p>
+                      ) : null}
                     </>
                   )}
                 </div>

@@ -10,17 +10,27 @@
 
 **Phase 1 完成**：本地数据层与真实 CRUD —— 11 张表（含独立复盘库）、现状/目标/行动/我是我/复盘/见证成长全部接上真实数据、矛盾生命周期（设定→替换归档→解决→进时间线）、7 个数据层测试。
 
-**尚未接入**：AI 对话、草案确认卡片、记忆整合、备份导入导出（Phase 2–4）。
+**尚未接入**：无（Phase 0–5 全部完成）。
+
+## 交付
+
+```bash
+npm run dist
+```
+
+产出 `release/win-unpacked/`，双击其中的 `woshiwo.exe` 即可运行，**免安装**。把整个文件夹拷到另一台 Windows x64 电脑上也能直接用；数据存在该文件夹下的 `data/` 目录里，**拷贝文件夹即带走全部数据**。
+
+重新生成图标：`node scripts/make-icon.mjs`（输出 `build/icon.png` 与 `build/icon.ico`）。
 
 ## 开发
 
 ```bash
 npm install
 npm run dev        # 启动开发窗口（热更新）
-npm run test       # 数据层测试（fake-indexeddb）
+npm run test       # 数据层与备份测试（fake-indexeddb）
 npm run typecheck  # 类型检查
 npm run build      # 生产构建到 out/
-npm run dist       # 打包便携版到 release/（Phase 5）
+npm run dist       # 打包便携版到 release/
 ```
 
 环境要求：Node 18+（本项目在 Node 22 上开发）。国内网络下载 Electron 二进制需要镜像，`.npmrc` 已配置。

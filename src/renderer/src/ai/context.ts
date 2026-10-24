@@ -2,6 +2,7 @@ import { MAX_CONTEXT_MESSAGES } from '../../../shared/constants'
 import type { ChatTurn } from '../../../shared/constants'
 import { db } from '../db/db'
 import { getCurrentContradiction, listGoals, listProfileCards, listViewpoints } from '../db/repo'
+import type { SourceRef } from '../db/types'
 import { SYSTEM_PROMPT } from './systemPrompt'
 
 /**
@@ -21,7 +22,7 @@ function formatDate(date: Date): string {
 
 export async function buildContext(input: {
   history: ChatTurn[]
-}): Promise<ChatTurn[]> {
+}): Promise<{ turns: ChatTurn[]; sources: SourceRef[] }> {
   const [contradiction, goals, cards, viewpoints, memories] = await Promise.all([
     getCurrentContradiction(),
     listGoals(),
@@ -29,6 +30,10 @@ export async function buildContext(input: {
     listViewpoints(),
     db.memories.where('status').equals('valid').toArray()
   ])
+
+  const sources: SourceRef[] = []
+  const brief = (text: string, limit = 24): string =>
+    text.length > limit ? `${text.slice(0, limit)}…` : text
 
   const parts: string[] = []
   parts.push(`今天是 ${formatDate(new Date())}。`)
@@ -38,6 +43,11 @@ export async function buildContext(input: {
       ? `（服务于目标：${contradiction.goalTitleSnapshot}）`
       : ''
     parts.push(`【当前主要矛盾】\n${contradiction.text}${goalNote}`)
+    sources.push({
+      table: 'contradictions',
+      id: contradiction.id,
+      label: brief(contradiction.text)
+    })
   }
 
   const activeGoals = goals.filter((goal) => goal.status === 'active')
@@ -50,7 +60,12 @@ export async function buildContext(input: {
       .map((goal, index) => `长期${index + 1}：${goal.title}`)
   ]
   const goalBlock = block('用户设立的目标（按优先级排序）', goalLines)
-  if (goalBlock) parts.push(goalBlock)
+  if (goalBlock) {
+    parts.push(goalBlock)
+    activeGoals.forEach((goal) =>
+      sources.push({ table: 'goals', id: goal.id, label: brief(goal.title) })
+    )
+  }
 
   const grouped = new Map<string, string[]>()
   for (const card of cards.slice(0, 60)) {
@@ -58,27 +73,57 @@ export async function buildContext(input: {
     bucket.push(card.content)
     grouped.set(card.category, bucket)
   }
-  const cardLines = [...grouped.entries()].map(([category, items]) => `${category}：${items.join('；')}`)
+  const cardLines = [...grouped.entries()].map(
+    ([category, items]) => `${category}：${items.join('；')}`
+  )
   const cardBlock = block('现状档案（用户维护的最新事实）', cardLines)
-  if (cardBlock) parts.push(cardBlock)
+  if (cardBlock) {
+    parts.push(cardBlock)
+    cards.slice(0, 60).forEach((card) =>
+      sources.push({
+        table: 'profileCards',
+        id: card.id,
+        label: `${card.category} · ${brief(card.content)}`
+      })
+    )
+  }
 
-  const insightLines = viewpoints.slice(0, 12).map((item, index) => `${index + 1}. ${item.content}`)
+  const recentViewpoints = viewpoints.slice(0, 12)
+  const insightLines = recentViewpoints.map((item, index) => `${index + 1}. ${item.content}`)
   const insightBlock = block('用户的感悟（最近的在前）', insightLines)
-  if (insightBlock) parts.push(insightBlock)
+  if (insightBlock) {
+    parts.push(insightBlock)
+    recentViewpoints.forEach((item) =>
+      sources.push({ table: 'viewpoints', id: item.id, label: brief(item.content) })
+    )
+  }
 
-  const memoryLines = memories
+  const recentMemories = memories
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .slice(0, 20)
-    .map((item) => `- ${item.content}${item.source === 'auto' ? '（自动提炼，未确认）' : ''}`)
-  const memoryBlock = block('长期记忆（历史对话提炼，可能过时；与现状档案冲突时以档案为准）', memoryLines)
-  if (memoryBlock) parts.push(memoryBlock)
+  const memoryLines = recentMemories.map(
+    (item) => `- ${item.content}${item.source === 'auto' ? '（自动提炼，未确认）' : ''}`
+  )
+  const memoryBlock = block(
+    '长期记忆（历史对话提炼，可能过时；与现状档案冲突时以档案为准）',
+    memoryLines
+  )
+  if (memoryBlock) {
+    parts.push(memoryBlock)
+    recentMemories.forEach((item) =>
+      sources.push({ table: 'memories', id: item.id, label: brief(item.content) })
+    )
+  }
 
   const system: ChatTurn = {
     role: 'system',
     content: `${SYSTEM_PROMPT}\n\n---\n\n# 当前上下文\n\n${parts.join('\n\n')}`
   }
 
-  return [system, ...input.history.slice(-MAX_CONTEXT_MESSAGES)]
+  return {
+    turns: [system, ...input.history.slice(-MAX_CONTEXT_MESSAGES)],
+    sources
+  }
 }
 
 /** 供「本次发送」透明展示用：只给计数，不含内容 */

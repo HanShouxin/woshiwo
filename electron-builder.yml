@@ -1,0 +1,25 @@
+appId: com.woshiwo.app
+productName: 我是我
+copyright: Copyright © 2026 我是我
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**
+  - package.json
+
+asar: true
+
+win:
+  target:
+    - target: dir
+      arch:
+        - x64
+  icon: build/icon.ico
+  # exe 用英文名，避免中文路径带来的兼容问题；窗口标题仍是「我是我」
+  executableName: woshiwo
+
+# 便携交付：--dir 产出的 release/win-unpacked 可直接双击 woshiwo.exe 运行，
+# 数据存在该目录下的 data/ 子目录，整个文件夹拷贝即带走全部数据。
