@@ -5,6 +5,7 @@ import Page from '../components/Page'
 import EditableText from '../components/EditableText'
 import Modal from '../components/Modal'
 import { formatDate } from '../lib/format'
+import { moveItem } from '../lib/reorder'
 import {
   addViewpoint,
   deleteViewpoint,
@@ -21,22 +22,23 @@ export default function Self(): React.JSX.Element {
   const [source, setSource] = useState('')
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
+  const [overAfter, setOverAfter] = useState(false)
 
   async function handleDrop(targetId: string): Promise<void> {
     const fromId = draggingId
+    const after = overAfter
     setDraggingId(null)
     setOverId(null)
+    setOverAfter(false)
     if (!fromId || fromId === targetId) return
 
-    const ids = viewpoints.map((item) => item.id)
-    const from = ids.indexOf(fromId)
-    const to = ids.indexOf(targetId)
-    if (from < 0 || to < 0) return
-
-    const next = [...ids]
-    next.splice(from, 1)
-    next.splice(to, 0, fromId)
-    await reorderViewpoints(next)
+    const next = moveItem(
+      viewpoints.map((item) => item.id),
+      fromId,
+      targetId,
+      after
+    )
+    if (next) await reorderViewpoints(next)
   }
 
   function closeModal(): void {
@@ -77,13 +79,20 @@ export default function Self(): React.JSX.Element {
           {viewpoints.map((item) => (
             <article
               className={`feed-item${draggingId === item.id ? ' feed-item--dragging' : ''}${
-                overId === item.id && draggingId !== item.id ? ' feed-item--over' : ''
+                overId === item.id && draggingId !== item.id
+                  ? overAfter
+                    ? ' feed-item--over-after'
+                    : ' feed-item--over-before'
+                  : ''
               }`}
               key={item.id}
               onDragOver={(event) => {
                 if (!draggingId) return
                 event.preventDefault()
+                // 指针在条目上半区 → 插到它前面；下半区 → 插到它后面
+                const rect = event.currentTarget.getBoundingClientRect()
                 setOverId(item.id)
+                setOverAfter(event.clientY - rect.top > rect.height / 2)
               }}
               onDragLeave={() => setOverId((prev) => (prev === item.id ? null : prev))}
               onDrop={(event) => {
