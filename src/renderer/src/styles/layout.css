@@ -1732,3 +1732,16 @@
   gap: 5px;
   min-height: 72px;
 }
+
+/* 卡片缩短：一行容纳更多 */
+.card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.info-card__category {
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
