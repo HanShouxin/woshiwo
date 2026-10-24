@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import {
   BookOpen,
   Feather,
@@ -53,18 +53,14 @@ function BrandMark(): React.JSX.Element {
 export default function Sidebar(): React.JSX.Element {
   return (
     <aside className="sidebar">
-      <div className="sidebar__brand">
+      <Link to="/" className="sidebar__brand" title="回到首页">
         <span className="brand-mark">
           <BrandMark />
         </span>
         <span className="sidebar__brand-name">我是我</span>
-      </div>
+      </Link>
 
-      <p className="sidebar__motto">
-        钱塘江上潮信来
-        <br />
-        今日方知我是我
-      </p>
+      <p className="sidebar__motto">钱塘江上潮信来，今日方知我是我。</p>
 
       <nav className="nav">
         {NAV_ITEMS.map((item) => {

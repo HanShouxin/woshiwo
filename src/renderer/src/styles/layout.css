@@ -1956,3 +1956,42 @@
 .step-item__delete {
   margin-top: 2px;
 }
+
+/* ---------- 品牌：蓝色徽标 + 单行题签 ---------- */
+
+.sidebar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px 7px 9px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #ffffff;
+  transition: background-color 140ms ease;
+}
+
+.sidebar__brand:hover {
+  background: var(--accent-hover);
+}
+
+.sidebar__brand .brand-mark {
+  color: #ffffff;
+}
+
+.sidebar__brand-name {
+  color: #ffffff;
+  font-size: 15px;
+  letter-spacing: 0.09em;
+}
+
+.sidebar__motto {
+  margin: 11px 0 0;
+  padding: 0 2px;
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
