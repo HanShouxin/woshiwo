@@ -39,12 +39,12 @@ if (!gotLock) {
       minWidth: 960,
       minHeight: 640,
       show: false,
-      backgroundColor: '#FBFAF8',
+      backgroundColor: '#FFFFFF',
       autoHideMenuBar: true,
       // 标题栏与页面同色：隐藏系统标题栏底，保留原生窗口按钮（overlay）
       titleBarStyle: 'hidden',
       titleBarOverlay: {
-        color: '#fbfaf8',
+        color: '#ffffff',
         symbolColor: '#1d1d1f',
         height: 36
       },
@@ -98,7 +98,7 @@ if (!gotLock) {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return false
       win.setTitleBarOverlay({
-        color: theme === 'dark' ? '#161618' : '#fbfaf8',
+        color: theme === 'dark' ? '#161618' : '#ffffff',
         symbolColor: theme === 'dark' ? '#f5f5f7' : '#1d1d1f',
         height: 36
       })

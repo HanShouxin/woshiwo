@@ -62,16 +62,17 @@ export default function Current(): React.JSX.Element {
         <div className="card-grid">
           {cards.map((card) => (
             <article className="info-card" key={card.id}>
+              <button
+                type="button"
+                className="row__action row__action--danger info-card__delete"
+                title="删除"
+                onClick={() => void deleteProfileCard(card.id)}
+              >
+                <X size={13} strokeWidth={2} />
+              </button>
               <header className="info-card__head">
                 <span className="info-card__category">{card.category}</span>
-                <button
-                  type="button"
-                  className="row__action row__action--danger info-card__delete"
-                  title="删除"
-                  onClick={() => void deleteProfileCard(card.id)}
-                >
-                  <X size={13} strokeWidth={2} />
-                </button>
+                <span className="info-card__mark">{card.category.slice(0, 1)}</span>
               </header>
               <div className="info-card__body">
                 <EditableText
