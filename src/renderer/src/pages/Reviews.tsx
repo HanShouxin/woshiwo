@@ -23,6 +23,8 @@ export default function Reviews(): React.JSX.Element {
   const [content, setContent] = useState('')
   const [dirty, setDirty] = useState(false)
   const [status, setStatus] = useState('')
+  /** 是否处于编辑态——空态与编辑器之间的开关，不能靠"有没有内容"推断 */
+  const [editing, setEditing] = useState(false)
 
   const active = selectedId ? list.find((item) => item.id === selectedId) : undefined
 
@@ -33,6 +35,7 @@ export default function Reviews(): React.JSX.Element {
     setTitle(pendingDraft.title)
     setContent(pendingDraft.content)
     setDirty(true)
+    setEditing(true)
     setStatus('')
   }, [])
 
@@ -50,6 +53,7 @@ export default function Reviews(): React.JSX.Element {
     setTitle(item.title)
     setContent(item.content)
     setDirty(false)
+    setEditing(true)
     setStatus('')
   }
 
@@ -60,6 +64,7 @@ export default function Reviews(): React.JSX.Element {
     setTitle('')
     setContent('')
     setDirty(false)
+    setEditing(true)
     setStatus('')
   }
 
@@ -89,10 +94,12 @@ export default function Reviews(): React.JSX.Element {
     setTitle('')
     setContent('')
     setDirty(false)
+    // 删完之后如果一篇都不剩，回到空态
+    setEditing(list.filter((item) => item.id !== id).length > 0)
     setStatus('')
   }
 
-  const editable = selectedId !== null || title.length > 0 || content.length > 0
+  const hasList = list.length > 0
 
   return (
     <Page title="复盘" desc="写给自己看。不分析、不打分、不给建议，只是一个安静的地方。">
@@ -101,7 +108,7 @@ export default function Reviews(): React.JSX.Element {
         仅保存在本地，AI 无法读取
       </span>
 
-      {list.length === 0 && !editable ? (
+      {!hasList && !editing ? (
         <div className="empty" style={{ marginTop: 24 }}>
           还没有写下的字。
           <span className="empty__hint">等你想说点什么的时候，它就在这里。</span>
