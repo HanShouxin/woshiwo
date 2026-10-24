@@ -70,7 +70,10 @@ export default function Current(): React.JSX.Element {
               >
                 <X size={13} strokeWidth={2} />
               </button>
-              <span className="info-card__mark">{card.category.slice(0, 1)}</span>
+              <span className="info-card__head">
+                <span className="info-card__category">{card.category}</span>
+                <span className="info-card__mark">{card.category.slice(0, 1)}</span>
+              </span>
               <div className="info-card__body">
                 <EditableText
                   multiline
@@ -78,7 +81,6 @@ export default function Current(): React.JSX.Element {
                   onSave={(next) => void updateProfileCard(card.id, { content: next })}
                 />
               </div>
-              <span className="info-card__category">{card.category}</span>
             </article>
           ))}
 
